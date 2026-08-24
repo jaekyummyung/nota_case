@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetsPresso 벤치마크 북</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pretendard/1.3.9/static/pretendard.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0c10; --surface:#111318; --surface2:#181c24; --border:#1e2330;
+    --accent:#00d4ff; --optimized:#1ED2EB; --npu:#a78bfa;
+    --text:#e8eaf0; --muted:#5a6070; --sidebar-w:250px;
+    --orig-color:#9B9DA4; --gpu-color:#1ED2EB; --npu-color:#a78bfa;
+    --font:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕','Noto Sans KR','Nanum Gothic',system-ui,sans-serif;
+    --mono:'Space Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,'D2Coding','Nanum Gothic Coding',monospace;
+    --green:#34d399; --orange:#fb923c;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--font); background:var(--bg); color:var(--text); height:100vh; overflow:hidden; display:flex; flex-direction:column; font-size:16px; }
+
+  /* Header */
+  header { display:flex; align-items:center; padding:0 28px; height:60px; background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0; gap:14px; }
+  header h1 { font-family:var(--font); font-size:20px; font-weight:700; color:#ffffff; letter-spacing:0.01em; white-space:nowrap; }
+  header h1 span { color:var(--accent); }
+  .header-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+  .header-badge { font-size:12px; font-family:var(--mono); color:var(--muted); border:1px solid var(--border); padding:4px 10px; border-radius:20px; }
+  .header-tagline { font-size:13px; color:var(--muted); }
+
+  /* Layout */
+  .layout { display:flex; flex:1; overflow:hidden; }
+
+  /* Sidebar */
+  aside { width:var(--sidebar-w); background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; overflow-y:auto; }
+  aside::-webkit-scrollbar { width:4px; }
+  aside::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+  .sidebar-section { border-bottom:1px solid var(--border); padding-bottom:6px; }
+  .sidebar-label { width:calc(100% - 16px); margin:3px 8px 0; padding:10px 12px;
+    background:#212836; border:1px solid #303950; border-radius:9px;
+    font-family:var(--font); font-size:13.5px; font-weight:700; color:#f0f2f7; letter-spacing:0; text-transform:none;
+    cursor:pointer; display:flex; align-items:center; gap:8px; text-align:left; user-select:none;
+    transition:background .16s, border-color .16s, color .16s; }
+  .sidebar-label:hover { background:#2b3446; border-color:#465274; color:#ffffff; }
+  .sidebar-label:hover .chev { color:#ffffff; }
+  .sidebar-label .sl-txt { flex:1; line-height:1.3; }
+  .sidebar-label .cnt { font-family:var(--mono); font-size:11px; color:#c8cad0; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.10); padding:2px 8px; border-radius:20px; flex-shrink:0; }
+  .sidebar-label .chev { font-size:11px; color:#a8b0c0; transition:transform .22s ease, color .16s; flex-shrink:0; }
+  .sidebar-section.collapsed .chev { transform:rotate(-90deg); }
+  .sidebar-section.collapsed .model-list { display:none; }
+  .sidebar-section:not(.collapsed) > .sidebar-label { background:rgba(0,212,255,0.16); border-color:rgba(0,212,255,0.45); color:#b6f2ff; }
+  .sidebar-section:not(.collapsed) > .sidebar-label .chev { color:#1ED2EB; }
+  .sidebar-section:not(.collapsed) > .sidebar-label .cnt { color:#b6f2ff; background:rgba(0,212,255,0.14); border-color:rgba(0,212,255,0.35); }
+  .sidebar-section:not(.collapsed) > .sidebar-label:hover { background:rgba(0,212,255,0.16); color:#ffffff; }
+  .sidebar-section { border-bottom:none; padding-bottom:2px; }
+  .sidebar-section:not(.collapsed) { padding-bottom:8px; }
+  .model-list { padding:4px 10px 0 16px; }
+  .model-btn { border-left:1px solid var(--border); border-radius:0 8px 8px 0; padding-left:12px; }
+  .model-btn:hover { border-left-color:#333c4d; }
+  .model-btn.active { border-left:2px solid var(--accent); }
+  .model-list { padding:4px 8px; display:flex; flex-direction:column; gap:3px; }
+  .model-btn { background:transparent; border:1px solid transparent; border-radius:8px; padding:8px 11px; cursor:pointer; color:#9ba3b5; font-family:var(--font); font-size:13.5px; font-weight:500; text-align:left; transition:all 0.2s; display:flex; align-items:center; gap:8px; line-height:1.35; }
+  .model-btn:hover { background:var(--surface2); color:var(--text); border-color:var(--border); }
+  .model-btn.active { background:rgba(0,212,255,0.08); color:var(--accent); border-color:rgba(0,212,255,0.25); }
+  .model-btn .dot { width:6px; height:6px; border-radius:50%; background:#9ba3b5; flex-shrink:0; transition:background 0.2s; }
+  .model-btn.active .dot { background:var(--accent); box-shadow:0 0 6px var(--accent); }
+  .model-btn .btn-txt { flex:1; }
+  .model-btn .btn-sub { display:block; font-size:11px; color:#6b7280; font-weight:400; margin-top:1px; }
+  .model-btn.active .btn-sub { color:#7fb8c8; }
+  .overview-btn { margin:10px 8px 4px; background:rgba(0,212,255,0.06); border:1px solid rgba(0,212,255,0.2); border-radius:8px; padding:10px 12px; cursor:pointer; color:#c8d4e8; font-family:var(--font); font-size:14px; font-weight:600; text-align:left; transition:all 0.2s; display:flex; align-items:center; gap:8px; }
+  .overview-btn:hover { background:rgba(0,212,255,0.12); color:#fff; }
+  .overview-btn.active { background:rgba(0,212,255,0.14); color:var(--accent); }
+
+  /* Main */
+  main { flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:14px; }
+  main > * { flex-shrink:0; }
+  main::-webkit-scrollbar { width:4px; }
+  main::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+  /* Empty */
+  .empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:var(--muted); text-align:center; }
+  .empty-icon { width:60px; height:60px; border:2px dashed var(--border); border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:24px; opacity:0.5; }
+
+  /* Animations */
+  @keyframes fadeUp { to { opacity:1; transform:translateY(0); } }
+  .anim-0 { opacity:0; transform:translateY(8px);  animation:fadeUp 0.4s ease 0.00s forwards; }
+  .anim-1 { opacity:0; transform:translateY(12px); animation:fadeUp 0.4s ease 0.08s forwards; }
+  .anim-2 { opacity:0; transform:translateY(12px); animation:fadeUp 0.4s ease 0.16s forwards; }
+  .anim-3 { opacity:0; transform:translateY(12px); animation:fadeUp 0.4s ease 0.24s forwards; }
+
+  /* ======= MODEL HEADER ======= */
+  .model-header-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 22px; }
+  .model-title-row { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px; }
+  .model-title-left h2 { font-size:24px; font-weight:800; color:#ffffff; letter-spacing:-0.02em; margin-bottom:6px; }
+  .model-task-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 12px; border-radius:20px; background:rgba(0,212,255,0.07); border:1px solid rgba(0,212,255,0.2); font-size:13px; color:#c8d0e0; }
+  .hw-grid { display:flex; flex-wrap:wrap; gap:8px; }
+  .hw-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:10px; background:var(--surface2); border:1px solid var(--border); font-size:13px; color:#c8cad0; }
+  .hw-chip .hw-icon { font-size:14px; }
+  .hw-chip .hw-type { font-size:11px; font-family:var(--mono); padding:2px 6px; border-radius:4px; margin-left:4px; }
+  .hw-gpu  { background:rgba(30,210,235,0.08);  border-color:rgba(30,210,235,0.2);  color:#1ED2EB; }
+  .hw-npu  { background:rgba(167,139,250,0.08); border-color:rgba(167,139,250,0.2); color:#a78bfa; }
+  .hw-cpu  { background:rgba(251,146,60,0.08);  border-color:rgba(251,146,60,0.2);  color:#fb923c; }
+  .hw-dsp  { background:rgba(52,211,153,0.08);  border-color:rgba(52,211,153,0.2);  color:#34d399; }
+  .hw-mcu  { background:rgba(236,72,153,0.08);  border-color:rgba(236,72,153,0.2);  color:#ec4899; }
+
+  /* ======= BEFORE/AFTER SUMMARY BAR ======= */
+  .before-after-banner { border-radius:14px; overflow:hidden; border:1px solid var(--border); }
+  .ba-header { display:flex; align-items:center; justify-content:space-between; padding:10px 18px; background:var(--surface2); border-bottom:1px solid var(--border); font-size:12px; font-family:var(--mono); color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; }
+  .ba-cards { display:flex; gap:0; }
+  .ba-card { flex:1; padding:14px 18px; background:var(--surface); position:relative; }
+  .ba-card + .ba-card { border-left:1px solid var(--border); }
+  .ba-card.before-card { border-left:3px solid rgba(155,157,164,0.4); }
+  .ba-card.after-card-gpu { border-left:3px solid rgba(30,210,235,0.5); }
+  .ba-card.after-card-npu { border-left:3px solid rgba(167,139,250,0.5); }
+  .ba-label { font-size:11px; font-family:var(--mono); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:6px; }
+  .ba-label.orig-lbl { color:var(--orig-color); }
+  .ba-label.gpu-lbl  { color:var(--gpu-color); }
+  .ba-label.npu-lbl  { color:var(--npu-color); }
+  .ba-hw { font-size:13px; color:#c8cad0; margin-bottom:4px; font-weight:600; }
+  .ba-time { font-family:var(--mono); font-size:22px; font-weight:700; color:var(--text); }
+  .ba-time.na { font-size:14px; color:var(--muted); font-weight:400; font-family:var(--font); }
+  .ba-speedup-pill { position:absolute; top:12px; right:14px; display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:13px; font-family:var(--mono); font-weight:700; }
+  .pill-gpu { background:rgba(30,210,235,0.12); color:#1ED2EB; border:1px solid rgba(30,210,235,0.3); }
+  .pill-npu { background:rgba(167,139,250,0.12); color:#a78bfa; border:1px solid rgba(167,139,250,0.3); }
+  .ba-speedup-arrow { font-size:16px; display:flex; align-items:center; padding:0 8px; color:var(--muted); }
+
+  /* ======= CHART SECTION ======= */
+  .chart-section { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px 20px; }
+  .chart-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px; }
+  .chart-title { font-size:14px; font-family:var(--mono); color:#c8cad0; letter-spacing:0.06em; text-transform:uppercase; }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:6px; font-size:13px; color:#9ba3b5; }
+  .legend-dot { width:10px; height:10px; border-radius:3px; }
+
+  .chart-wrapper { display:flex; height:240px; }
+  .y-axis { width:60px; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-end; padding-bottom:40px; padding-right:10px; }
+  .y-label { font-size:12px; font-family:var(--mono); color:var(--muted); }
+  .chart-area { flex:1; display:flex; flex-direction:column; }
+  .grid-and-bars { flex:1; position:relative; border-left:1px solid var(--border); }
+  .grid-line { position:absolute; left:0; right:0; border-top:1px solid rgba(255,255,255,0.04); }
+  .bars-container { position:absolute; inset:0; display:flex; align-items:flex-end; padding:10px 20px 0; justify-content:space-around; gap:8px; }
+  .bar-group { display:flex; flex-direction:column; align-items:center; flex:1; max-width:90px; height:100%; justify-content:flex-end; }
+  .bar-wrapper { width:100%; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; position:relative; }
+  .bar-value { font-size:12px; font-family:var(--mono); color:var(--text); margin-bottom:5px; opacity:0; transition:opacity 0.3s ease 0.5s; white-space:nowrap; }
+  .bar { width:68%; border-radius:6px 6px 0 0; height:0; transition:height 0.8s cubic-bezier(0.34,1.56,0.64,1); position:relative; cursor:pointer; }
+  .bar.original      { background:linear-gradient(180deg,#9B9DA4,#6b6e76); box-shadow:0 0 12px rgba(155,157,164,0.15); }
+  .bar.optimized     { background:linear-gradient(180deg,#1ED2EB,#12a0b5); box-shadow:0 0 12px rgba(30,210,235,0.25); }
+  .bar.optimized_npu { background:linear-gradient(180deg,#a78bfa,#7c3aed); box-shadow:0 0 12px rgba(167,139,250,0.25); }
+  .bar.na            { background:repeating-linear-gradient(45deg,#1e2330,#1e2330 4px,#252a36 4px,#252a36 8px); opacity:0.5; }
+  .bar:hover { filter:brightness(1.2); }
+  .bar-tooltip { position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:12px; white-space:nowrap; pointer-events:none; opacity:0; transition:opacity 0.2s; z-index:10; color:var(--text); }
+  .bar:hover .bar-tooltip { opacity:1; }
+  .x-axis { height:50px; display:flex; align-items:flex-start; padding-top:8px; justify-content:space-around; padding-left:20px; padding-right:20px; gap:8px; }
+  .x-label { flex:1; max-width:90px; text-align:center; font-size:13px; color:#fff; line-height:1.5; font-weight:500; }
+
+  /* ======= SPEEDUP CARDS ======= */
+  .speedup-section { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; }
+  .speedup-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:4px; position:relative; overflow:hidden; }
+  .speedup-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+  .speedup-card.s-gpu::before { background:linear-gradient(90deg,#1ED2EB,transparent); }
+  .speedup-card.s-npu::before { background:linear-gradient(90deg,#a78bfa,transparent); }
+  .speedup-device { font-size:13px; color:#8a90a0; }
+  .speedup-value { font-family:var(--mono); font-size:32px; font-weight:700; background:linear-gradient(135deg,var(--optimized),#00a8c5); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; margin:4px 0; }
+  .speedup-value.npu { background:linear-gradient(135deg,#a78bfa,#7c3aed); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .speedup-label { font-size:13px; color:#8a90a0; }
+  .speedup-enabled { font-size:13px; color:#c8cad0; line-height:1.6; padding:6px 0; }
+
+  /* ======= ACCURACY ======= */
+  .metrics-section { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px 18px; }
+  .metrics-title { font-size:13px; font-family:var(--mono); color:#c8cad0; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:12px; }
+  .metrics-row { display:flex; align-items:stretch; gap:12px; flex-wrap:wrap; }
+  .metric-card { flex:1; min-width:120px; border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:4px; position:relative; }
+  .metric-card.orig-card    { background:rgba(155,157,164,0.07); border:1px solid rgba(155,157,164,0.2); }
+  .metric-card.opt-card     { background:rgba(30,210,235,0.06);  border:1px solid rgba(30,210,235,0.2); }
+  .metric-card.opt-npu-card { background:rgba(167,139,250,0.06); border:1px solid rgba(167,139,250,0.2); }
+  .metric-type  { font-size:11px; font-family:var(--mono); letter-spacing:0.08em; text-transform:uppercase; }
+  .orig-card .metric-type    { color:#9B9DA4; }
+  .opt-card .metric-type     { color:#1ED2EB; }
+  .opt-npu-card .metric-type { color:#a78bfa; }
+  .metric-value { font-family:var(--mono); font-size:28px; font-weight:700; color:var(--text); letter-spacing:-0.02em; }
+  .metric-label { font-size:13px; color:#8a90a0; }
+  .metric-diff  { position:absolute; top:12px; right:14px; font-size:12px; font-family:var(--mono); padding:3px 8px; border-radius:20px; background:rgba(30,210,235,0.1); color:#1ED2EB; border:1px solid rgba(30,210,235,0.2); }
+  .metric-diff.npu { background:rgba(167,139,250,0.1); color:#a78bfa; border-color:rgba(167,139,250,0.2); }
+  .metrics-divider { width:1px; background:var(--border); flex-shrink:0; align-self:stretch; }
+
+  /* ======= LLM STYLES ======= */
+  .llm-content-wrap { display:flex; flex-direction:column; gap:14px; }
+  .llm-chart-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px; }
+  .llm-chart-title { font-size:14px; font-family:var(--mono); color:#c8cad0; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px; }
+  .llm-chart-unit  { font-size:13px; color:#8a90a0; margin-bottom:20px; }
+  .llm-bar-list { display:flex; flex-direction:column; gap:12px; }
+  .llm-bar-row  { display:flex; flex-direction:column; gap:5px; }
+  .llm-bar-header { display:flex; justify-content:space-between; align-items:baseline; }
+  .llm-bar-label { font-size:14px; color:var(--text); font-weight:600; font-family:var(--font); }
+  .llm-bar-val   { font-size:14px; font-family:var(--mono); color:var(--text); }
+  .llm-track { height:10px; background:var(--surface2); border-radius:6px; overflow:hidden; border:1px solid var(--border); }
+  .llm-fill  { height:100%; border-radius:6px; width:0; transition:width 0.8s cubic-bezier(0.34,1.56,0.64,1); }
+  .llm-hw-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:6px; font-size:11px; font-family:var(--mono); margin-left:8px; vertical-align:middle; }
+
+  /* LLM context info row */
+  .llm-info-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .llm-info-chip { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:10px; background:var(--surface2); border:1px solid var(--border); font-size:13px; color:#c8cad0; }
+  .llm-info-chip strong { color:#fff; font-family:var(--mono); }
+
+  /* ======= LLM DEVICE CARDS ======= */
+  .llm-framing-box { background:rgba(0,212,255,0.04); border:1px solid rgba(0,212,255,0.15); border-radius:12px; padding:12px 16px; font-size:13px; color:#a0a8b8; line-height:1.6; }
+  .llm-framing-box strong { color:#c8d4e8; }
+
+  .device-cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; }
+  .device-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:12px; position:relative; overflow:hidden; transition:border-color 0.2s; }
+  .device-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+  .device-card.dc-blue::before   { background:linear-gradient(90deg,#1ED2EB,transparent); }
+  .device-card.dc-purple::before { background:linear-gradient(90deg,#a78bfa,transparent); }
+  .device-card.dc-green::before  { background:linear-gradient(90deg,#34d399,transparent); }
+  .device-card.dc-orange::before { background:linear-gradient(90deg,#fb923c,transparent); }
+  .dc-hw-name { font-size:15px; font-weight:700; color:#fff; }
+  .dc-realtime-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11px; font-family:var(--mono); font-weight:700; margin-top:2px; width:fit-content; }
+  .badge-realtime  { background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.3); }
+  .badge-neartime  { background:rgba(251,146,60,0.12);  color:#fb923c; border:1px solid rgba(251,146,60,0.3); }
+  .badge-offline   { background:rgba(155,157,164,0.12); color:#9B9DA4; border:1px solid rgba(155,157,164,0.3); }
+  .dc-spec { font-size:10.5px; font-family:var(--mono); color:#6b7280; margin:3px 0 4px; }
+  .dc-note { font-size:11.5px; color:#8a90a0; background:var(--surface2); border:1px solid var(--border); border-radius:7px; padding:5px 9px; line-height:1.45; }
+  .dc-boost { font-size:11.5px; color:#34d399; background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.25); border-radius:7px; padding:5px 9px; line-height:1.45; }
+  .dc-boost b { font-family:var(--mono); font-size:13px; }
+  .fail-note { background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.22); border-radius:12px; padding:13px 18px; font-size:13.5px; color:#c8d4e8; line-height:1.6; }
+  .fail-note b { color:#1ED2EB; }
+  .dc-metrics { display:flex; flex-direction:column; gap:2px; }
+  .dc-metric-row { display:flex; flex-direction:column; gap:4px; padding-bottom:15px; }
+  .dc-metric-header { display:flex; justify-content:space-between; align-items:baseline; }
+  .dc-metric-label { font-size:11px; font-family:var(--mono); color:var(--muted); letter-spacing:0.08em; }
+  .dc-metric-val { font-size:15px; font-family:var(--mono); font-weight:700; color:var(--text); }
+  .dc-track { height:6px; background:var(--surface2); border-radius:4px; overflow:visible; border:1px solid var(--border); position:relative; }
+  .dc-fill  { height:100%; border-radius:4px; width:0; transition:width 0.8s cubic-bezier(0.34,1.56,0.64,1); }
+  .dc-baseline-line { position:absolute; top:-3px; bottom:-3px; width:2px; border-radius:2px; z-index:2; }
+  .dc-baseline-label { position:absolute; top:10px; font-size:9.5px; font-family:var(--mono); white-space:nowrap; transform:translateX(-50%); opacity:0.85; }
+
+  /* LLM bar chart with baseline */
+  .llm-chart-subtitle { font-size:13px; color:#8a90a0; margin-bottom:6px; }
+  .llm-baseline-note { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#8a90a0; margin-bottom:16px; padding:4px 10px; background:var(--surface2); border-radius:6px; border:1px solid var(--border); }
+  .baseline-dot-ttft  { width:8px; height:8px; border-radius:2px; background:#f59e0b; flex-shrink:0; }
+  .baseline-dot-dec   { width:8px; height:8px; border-radius:2px; background:#10b981; flex-shrink:0; }
+  .llm-track { overflow:visible; position:relative; }
+  .llm-baseline-marker { position:absolute; top:-4px; bottom:-4px; width:2px; border-radius:2px; z-index:2; pointer-events:none; }
+  .llm-baseline-tip { position:absolute; top:-22px; left:50%; transform:translateX(-50%); font-size:10px; font-family:var(--mono); white-space:nowrap; padding:2px 5px; border-radius:4px; }
+  .llm-bar-val { display:flex; align-items:center; gap:6px; }
+
+  /* ======= BENCH (BEFORE/AFTER) RENDERER ======= */
+  .tech-row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .tech-row-label { font-size:11px; font-family:var(--mono); color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; margin-right:2px; }
+  .tech-chip { display:inline-flex; align-items:center; padding:5px 12px; border-radius:8px; background:rgba(0,212,255,0.06); border:1px solid rgba(0,212,255,0.18); font-size:12.5px; color:#a8d8e8; }
+
+  .bench-grid { display:flex; flex-direction:column; gap:12px; }
+  .bench-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px 20px; position:relative; overflow:hidden; }
+  .bench-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,#1ED2EB,transparent); }
+  .bench-card.keep::before { background:linear-gradient(90deg,#34d399,transparent); }
+  .bench-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+  .bench-metric-name { font-size:15px; font-weight:700; color:#fff; }
+  .bench-metric-unit { font-size:12px; font-family:var(--mono); color:var(--muted); margin-left:8px; }
+  .bench-delta { display:inline-flex; align-items:center; gap:6px; padding:5px 13px; border-radius:20px; font-size:14px; font-family:var(--mono); font-weight:700; background:rgba(30,210,235,0.12); color:#1ED2EB; border:1px solid rgba(30,210,235,0.3); }
+  .bench-delta.keep { background:rgba(52,211,153,0.12); color:#34d399; border-color:rgba(52,211,153,0.3); }
+  .bench-rows { display:flex; flex-direction:column; gap:11px; }
+  .bench-row { display:grid; grid-template-columns:178px 1fr 112px; align-items:center; gap:14px; }
+  .bench-row-lbl { font-size:13px; color:#9ba3b5; text-align:right; line-height:1.35; }
+  .bench-row.after .bench-row-lbl { color:#c8d4e8; font-weight:600; }
+  .bench-track { height:26px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; overflow:hidden; }
+  .bench-fill { height:100%; border-radius:6px; width:0; transition:width 0.85s cubic-bezier(0.34,1.56,0.64,1); }
+  .bench-fill.orig { background:linear-gradient(90deg,#9B9DA4,#6b6e76); }
+  .bench-fill.opt  { background:linear-gradient(90deg,#1ED2EB,#12a0b5); box-shadow:0 0 14px rgba(30,210,235,0.28); }
+  .bench-fill.opt.keep { background:linear-gradient(90deg,#34d399,#059669); box-shadow:0 0 14px rgba(52,211,153,0.28); }
+  .bench-row-val { font-family:var(--mono); font-size:17px; font-weight:700; color:var(--text); }
+  .bench-row.before .bench-row-val { color:#9B9DA4; }
+  .bench-note { margin-top:12px; font-size:12.5px; color:#8a90a0; line-height:1.6; border-top:1px solid var(--border); padding-top:10px; }
+  .bench-note strong { color:#c8d4e8; }
+
+  .bench-summary { background:linear-gradient(90deg,rgba(0,212,255,0.09),rgba(0,212,255,0.02)); border:1px solid rgba(0,212,255,0.2); border-radius:14px; padding:14px 20px; font-size:14.5px; color:#dfe8f5; line-height:1.6; font-weight:600; }
+  .bench-footnote { font-size:12.5px; color:#8a90a0; line-height:1.6; padding:0 4px; }
+
+  .spec-box { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px 16px; font-size:13px; color:#a8b0c0; line-height:1.6; }
+  .spec-box strong { color:#fff; }
+
+  /* KIMI chart */
+  .svg-chart-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px; }
+  .svg-legend { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:10px; }
+  .svg-legend-item { display:flex; align-items:center; gap:7px; font-size:13px; color:#c8cad0; }
+  .svg-legend-line { width:20px; height:3px; border-radius:2px; }
+
+  /* ======= KIMI K3 — DRAMATIC ======= */
+  .kimi-hero { position:relative; overflow:hidden; border-radius:20px; padding:32px 36px 28px;
+    background:radial-gradient(120% 170% at 12% 0%, rgba(30,210,235,0.17), transparent 56%),
+               radial-gradient(110% 150% at 96% 105%, rgba(167,139,250,0.15), transparent 55%), #0d1017;
+    border:1px solid rgba(30,210,235,0.22); }
+  .kimi-hero::after { content:''; position:absolute; inset:0; pointer-events:none;
+    background:linear-gradient(105deg,transparent 32%,rgba(255,255,255,0.045) 48%,transparent 64%);
+    transform:translateX(-100%); animation:shine 3.6s ease 0.9s infinite; }
+  @keyframes shine { 0%{transform:translateX(-100%)} 60%,100%{transform:translateX(100%)} }
+  .kh-eyebrow { font-family:var(--mono); font-size:11.5px; letter-spacing:0.2em; color:#1ED2EB; text-transform:uppercase; margin-bottom:16px; }
+  .kh-line { display:flex; align-items:baseline; flex-wrap:wrap; }
+  .kh-num { font-family:var(--mono); font-size:62px; font-weight:700; line-height:1; color:#5f6674; letter-spacing:-0.03em; }
+  .kh-num.accent { background:linear-gradient(135deg,#7ff0ff,#1ED2EB 52%,#7c9fff); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; filter:drop-shadow(0 0 24px rgba(30,210,235,0.45)); }
+  .kh-unit { font-family:var(--mono); font-size:28px; font-weight:700; color:#5f6674; margin:0 4px 0 2px; }
+  .kh-unit.accent { color:#1ED2EB; }
+  .kh-arrow { font-size:32px; color:#3f4756; margin:0 16px; }
+  .kh-strike { position:relative; }
+  .kh-strike::after { content:''; position:absolute; left:-4px; right:2px; top:52%; height:3px; background:#6b7280; border-radius:2px; transform:scaleX(0); transform-origin:left; animation:strike 0.55s cubic-bezier(0.22,1,0.36,1) 1.15s forwards; }
+  @keyframes strike { to { transform:scaleX(1); } }
+  .kh-sub { margin-top:16px; font-size:17.5px; color:#c8d4e8; line-height:1.6; font-weight:500; }
+  .kh-sub b { color:#fff; }
+  .kh-sub .hl { color:#1ED2EB; font-weight:700; }
+  .kh-pills { display:flex; gap:10px; flex-wrap:wrap; margin-top:22px; position:relative; z-index:2; }
+  .kh-pill { background:rgba(8,10,14,0.6); border:1px solid var(--border); border-radius:12px; padding:11px 17px; min-width:158px; }
+  .kh-pill-v { font-family:var(--mono); font-size:23px; font-weight:700; color:#fff; line-height:1.1; }
+  .kh-pill-v.cy { color:#1ED2EB; } .kh-pill-v.gr { color:#34d399; } .kh-pill-v.go { color:#f0b429; }
+  .kh-pill-l { font-size:12px; color:#8a90a0; margin-top:4px; }
+
+  /* head-to-head */
+  .h2h { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 22px 14px; }
+  .h2h-row { display:grid; grid-template-columns:196px 1fr 168px; align-items:center; gap:14px; margin-bottom:14px; }
+  .h2h-name { text-align:right; font-size:12.5px; color:#7a8296; line-height:1.35; }
+  .h2h-name b { display:block; color:#c8d4e8; font-size:14px; font-weight:700; margin-bottom:1px; }
+  .h2h-row.win .h2h-name b { color:#fff; }
+  .h2h-track { position:relative; height:34px; background:var(--surface2); border:1px solid var(--border); border-radius:9px; }
+  .h2h-fill { height:100%; border-radius:8px; width:0; transition:width 1.05s cubic-bezier(0.22,1,0.36,1); }
+  .h2h-fill.reap { background:linear-gradient(90deg,#454b57,#6b7280); }
+  .h2h-fill.orig { background:linear-gradient(90deg,#8a6a1c,#f0b429); }
+  .h2h-fill.nota { background:linear-gradient(90deg,#0e7f92,#1ED2EB 70%,#7ff0ff); box-shadow:0 0 22px rgba(30,210,235,0.45); }
+  .h2h-base { position:absolute; top:-9px; bottom:-9px; width:2px; background:#f0b429; z-index:4; border-radius:2px; }
+  .h2h-base-tip { position:absolute; top:-26px; left:50%; transform:translateX(-50%); white-space:nowrap; font-size:10.5px; font-family:var(--mono); color:#f0b429; background:rgba(240,180,41,0.12); border:1px solid rgba(240,180,41,0.3); padding:2px 7px; border-radius:5px; }
+  .h2h-val { font-family:var(--mono); font-size:21px; font-weight:700; color:#c8cad0; display:flex; align-items:center; gap:6px; }
+  .h2h-row.win .h2h-val { color:#1ED2EB; }
+  .h2h-tag { display:inline-block; white-space:nowrap; font-size:10.5px; font-family:var(--mono); padding:3px 8px; border-radius:10px; }
+  .tag-win  { background:rgba(30,210,235,0.14); color:#1ED2EB; border:1px solid rgba(30,210,235,0.32); }
+  .tag-base { background:rgba(240,180,41,0.12); color:#f0b429; border:1px solid rgba(240,180,41,0.3); }
+  .tag-lose { background:rgba(155,157,164,0.1); color:#9B9DA4; border:1px solid rgba(155,157,164,0.25); }
+
+  /* GPU rack */
+  .gpu-panel { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 22px 20px; }
+  .gpu-compare { display:flex; gap:46px; align-items:flex-end; justify-content:center; padding:18px 0 6px; }
+  .gpu-col { display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .gpu-stack { display:flex; flex-direction:column-reverse; gap:6px; }
+  .gpu-slot { position:relative; width:132px; height:21px; border-radius:5px; border:1px dashed rgba(255,255,255,0.07); }
+  .gpu-unit { position:absolute; inset:0; border-radius:4px; background:linear-gradient(180deg,#7d828d,#565b66); overflow:hidden; transition:opacity .55s ease, transform .55s ease; }
+  .gpu-unit .gu-on { position:absolute; inset:0; background:linear-gradient(180deg,#5ce6ff,#12a0b5); opacity:0; transition:opacity .55s ease; }
+  .gpu-unit.on { box-shadow:0 0 18px rgba(30,210,235,0.5); }
+  .gpu-unit.on .gu-on { opacity:1; }
+  .gpu-unit.off { opacity:0; transform:scaleY(0.35) translateX(28px); }
+  .gpu-col-lbl { font-size:13px; color:#9ba3b5; text-align:center; }
+  .gpu-col-lbl b { display:block; font-family:var(--mono); font-size:20px; color:#fff; margin-bottom:2px; }
+  .gpu-col-lbl.after b { color:#1ED2EB; }
+  .gpu-arrow-mid { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding-bottom:34px; }
+  .gpu-arrow-mid .ga { font-size:26px; color:#3f4756; }
+  .gpu-arrow-mid .gl { font-family:var(--mono); font-size:13px; color:#1ED2EB; font-weight:700; white-space:nowrap; }
+
+  .kimi-quote { border-left:3px solid #1ED2EB; padding:4px 0 4px 18px; font-size:15px; color:#c8d4e8; line-height:1.65; }
+  .kimi-quote b { color:#fff; }
+
+
+  /* ======= REALTIME STRIP ======= */
+  .rt-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 22px 14px; }
+  .rt-wrap { position:relative; margin:40px 8px 48px; }
+  .rt-strip { position:relative; height:54px; border-radius:10px; overflow:hidden; border:1px solid var(--border); display:flex; }
+  .rt-zone { position:absolute; top:0; bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:10.5px; color:#79808f; line-height:1.35; border-right:1px solid rgba(0,0,0,0.45); padding:0 4px; }
+  .rt-zone b { font-family:var(--mono); font-size:11px; color:#a8b0c0; margin-top:2px; }
+  .rt-zone.z0 { background:linear-gradient(180deg,#191d25,#14171d); }
+  .rt-zone.z1 { background:linear-gradient(180deg,rgba(251,146,60,0.16),rgba(251,146,60,0.06)); }
+  .rt-zone.z1 b { color:#fb923c; }
+  .rt-zone.z2 { background:linear-gradient(180deg,rgba(52,211,153,0.16),rgba(52,211,153,0.06)); }
+  .rt-zone.z2 b { color:#34d399; }
+  .rt-zone.z3 { background:linear-gradient(180deg,rgba(30,210,235,0.2),rgba(30,210,235,0.07)); }
+  .rt-zone.z3 b { color:#1ED2EB; }
+  .rt-mark { position:absolute; top:-7px; height:68px; width:2px; z-index:5; }
+  .rt-mark.before { background:#b9bec8; box-shadow:0 0 8px rgba(185,190,200,0.35); }
+  .rt-mark.after  { background:#1ED2EB; box-shadow:0 0 14px rgba(30,210,235,0.8); }
+  .rt-cap { position:absolute; white-space:nowrap; font-size:11.5px; font-family:var(--mono); padding:4px 9px; border-radius:7px; }
+  .rt-mark.before .rt-cap { top:74px; background:rgba(155,157,164,0.1); color:#9B9DA4; border:1px solid rgba(155,157,164,0.28); }
+  .rt-mark.after  .rt-cap { top:-32px; background:rgba(30,210,235,0.12); color:#1ED2EB; border:1px solid rgba(30,210,235,0.35); font-weight:700; }
+  .rt-jump { position:absolute; top:22px; height:10px; border-top:1px dashed rgba(30,210,235,0.5); border-right:1px dashed rgba(30,210,235,0.5); z-index:4; }
+.rt-zone-legend { display:none; gap:8px 14px; flex-wrap:wrap; margin:-18px 0 14px; }
+  .rzl { display:flex; align-items:center; gap:5px; font-size:11px; color:#79808f; }
+  .rzl i { width:10px; height:10px; border-radius:3px; display:block; }
+  .rzl.z0 i{background:#242933} .rzl.z1 i{background:#fb923c} .rzl.z2 i{background:#34d399} .rzl.z3 i{background:#1ED2EB}
+  .rzl b { font-family:var(--mono); color:#a8b0c0; font-weight:400; }
+  .rt-verdict { font-size:13.5px; color:#c8d4e8; line-height:1.6; border-top:1px solid var(--border); padding-top:12px; margin-top:6px; }
+  .rt-verdict b { color:#fff; }
+  .rt-verdict .up { color:#1ED2EB; font-weight:700; }
+  .rt-fps { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+  .rt-fps-chip { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:8px 14px; font-size:12.5px; color:#8a90a0; }
+  .rt-fps-chip b { font-family:var(--mono); font-size:16px; color:#fff; margin-left:6px; }
+  .rt-fps-chip.on b { color:#1ED2EB; }
+
+  /* ======= PEER RANK ======= */
+  .peer-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 22px 16px; }
+  .peer-row { display:grid; grid-template-columns:212px 1fr 84px; align-items:center; gap:12px; padding:5px 0; }
+  .peer-name { text-align:right; font-size:12.5px; color:#7a8296; line-height:1.3; }
+  .peer-name b { color:#9ba3b5; font-weight:600; }
+  .peer-row.me .peer-name b { color:#fff; }
+  .peer-track { height:16px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; }
+  .peer-fill { height:100%; border-radius:5px; width:0; background:linear-gradient(90deg,#3a4150,#5a6272); transition:width .8s cubic-bezier(0.22,1,0.36,1); }
+  .peer-row.me .peer-fill { background:linear-gradient(90deg,#0e7f92,#1ED2EB); box-shadow:0 0 14px rgba(30,210,235,0.35); }
+  .peer-val { font-family:var(--mono); font-size:14px; color:#8a90a0; font-weight:700; }
+  .peer-row.me .peer-val { color:#1ED2EB; font-size:16px; }
+
+  /* ======= COMPARE VIEW ======= */
+  .cmp-head { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px 20px; }
+  .cmp-title { font-size:20px; font-weight:800; color:#fff; margin-bottom:5px; }
+  .cmp-desc { font-size:13px; color:#8a90a0; line-height:1.6; }
+  .cmp-controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; align-items:center; }
+  .cmp-chip { background:var(--surface2); border:1px solid var(--border); color:#9ba3b5; border-radius:20px; padding:6px 14px; font-size:12.5px; cursor:pointer; font-family:var(--font); transition:all .18s; }
+  .cmp-chip:hover { color:#fff; border-color:#2c3444; }
+  .cmp-chip.on { background:rgba(0,212,255,0.12); border-color:rgba(0,212,255,0.4); color:#1ED2EB; font-weight:600; }
+  .cmp-sep { width:1px; height:20px; background:var(--border); margin:0 4px; }
+  .cmp-table { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:8px 20px 16px; }
+  .cmp-hdr { display:grid; grid-template-columns:230px 1fr 216px 72px; gap:14px; padding:12px 0 10px; border-bottom:1px solid var(--border); font-size:11px; font-family:var(--mono); color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; }
+  .cmp-hdr span:nth-child(3),.cmp-hdr span:nth-child(4) { text-align:right; }
+  .cmp-row { display:grid; grid-template-columns:230px 1fr 216px 72px; gap:14px; align-items:center; padding:9px 0; border-bottom:1px solid rgba(30,35,48,0.5); cursor:pointer; transition:background .15s; font-family:var(--font); text-align:left; width:100%; background:none; border-left:none; border-right:none; border-top:none; }
+  .cmp-row:hover { background:rgba(255,255,255,0.025); }
+  .cmp-nm { font-size:13.5px; font-weight:700; color:#fff; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cmp-hw { font-size:11px; font-family:var(--mono); color:#6b7280; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cmp-bar { height:20px; background:var(--surface2); border:1px solid var(--border); border-radius:6px; position:relative; }
+  .cmp-fill { height:100%; border-radius:5px; width:0; transition:width .75s cubic-bezier(0.22,1,0.36,1); }
+  .cmp-g-server     { background:linear-gradient(90deg,#0e7f92,#1ED2EB); }
+  .cmp-g-ondevice   { background:linear-gradient(90deg,#7c3aed,#a78bfa); }
+  .cmp-g-yolo       { background:linear-gradient(90deg,#059669,#34d399); }
+  .cmp-g-industrial { background:linear-gradient(90deg,#c2410c,#fb923c); }
+  .cmp-g-edge       { background:linear-gradient(90deg,#a16207,#f0b429); }
+  .cmp-g-detail-cv  { background:linear-gradient(90deg,#4b5563,#9ca3af); }
+  .cmp-ba { font-family:var(--mono); font-size:12px; color:#8a90a0; text-align:right; white-space:nowrap; overflow:hidden; line-height:1.55; }
+  .cmp-ba-l { font-family:var(--font); font-size:11.5px; color:#6b7280; overflow:hidden; text-overflow:ellipsis; }
+  .cmp-ba b { color:#c8d4e8; }
+  .cmp-ratio { font-family:var(--mono); font-size:17px; font-weight:700; color:#1ED2EB; text-align:right; }
+  .cmp-note { font-size:12.5px; color:#8a90a0; line-height:1.6; padding:0 4px 12px; }
+  .cmp-legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; }
+  .cmp-lg { display:flex; align-items:center; gap:6px; font-size:12px; color:#8a90a0; }
+  .cmp-lg i { width:12px; height:12px; border-radius:3px; display:block; }
+  .cmp-empty { padding:40px; text-align:center; color:var(--muted); font-size:13.5px; }
+
+
+  .cust-box { font-size:13px; color:#8a90a0; line-height:1.6; padding:0 6px; margin-top:-4px; }
+  .uc-grid { display:grid; grid-template-columns:1.15fr 1fr 1.3fr; gap:12px; }
+  .uc-col { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:15px 18px; position:relative; overflow:hidden; }
+  .uc-col::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,#4b5563,transparent); }
+  .uc-col.sol::before { background:linear-gradient(90deg,#1ED2EB,transparent); }
+  .uc-h { font-size:11px; font-family:var(--mono); letter-spacing:0.12em; text-transform:uppercase; color:#6b7280; margin-bottom:9px; }
+  .uc-h.ch { color:#fb923c; } .uc-h.so { color:#1ED2EB; }
+  .uc-col p { font-size:13px; color:#a8b0c0; line-height:1.65; }
+  .uc-col ul { list-style:none; display:flex; flex-direction:column; gap:7px; }
+  .uc-col li { font-size:13px; color:#a8b0c0; line-height:1.6; padding-left:13px; position:relative; }
+  .uc-col li::before { content:''; position:absolute; left:0; top:8px; width:4px; height:4px; border-radius:50%; background:#4b5563; }
+  .uc-col.sol li { color:#c8d4e8; } .uc-col.sol li::before { background:#1ED2EB; }
+  @media (max-width:1150px){ .uc-grid { grid-template-columns:1fr 1fr; } .uc-col.sol { grid-column:1/-1; } }
+  @media (max-width:900px){ .uc-grid { grid-template-columns:1fr; } .uc-col.sol { grid-column:auto; } }
+  .cond-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px 22px 14px; }
+  .cond-row { display:grid; grid-template-columns:170px 1fr; gap:14px; padding:8px 0; border-bottom:1px solid rgba(30,35,48,0.6); font-size:13px; align-items:baseline; }
+  .cond-row:last-child { border-bottom:none; }
+  .cond-k { color:#6b7280; font-size:12px; }
+  .cond-v { color:#c8d4e8; line-height:1.5; }
+  @media (max-width:900px){ .cond-row { grid-template-columns:1fr; gap:2px; } }
+
+  /* ═══════ 반응형 ═══════ */
+  .menu-btn { display:none; background:var(--surface2); border:1px solid var(--border); color:#c8cad0; border-radius:9px; width:36px; height:32px; font-size:15px; cursor:pointer; flex-shrink:0; }
+  .sb-backdrop { display:none; }
+
+  @media (max-width:1340px) {
+    .cmp-hdr, .cmp-row { grid-template-columns:200px 1fr 200px 66px; gap:11px; }
+    .bench-row { grid-template-columns:158px 1fr 104px; }
+    .h2h-row { grid-template-columns:168px 1fr 152px; }
+    .peer-row { grid-template-columns:184px 1fr 74px; }
+    .rt-zone { font-size:10px; }
+  }
+  @media (max-width:1150px) {
+    :root { --sidebar-w:206px; }
+    main { padding:16px 16px; }
+    .model-title-left h2 { font-size:21px; }
+    .kh-num { font-size:48px; } .kh-unit { font-size:22px; } .kh-arrow { font-size:26px; margin:0 10px; }
+    .cmp-hdr, .cmp-row { grid-template-columns:168px 1fr 178px 60px; }
+    .cmp-nm { font-size:12.5px; } .cmp-ba { font-size:11px; } .cmp-ratio { font-size:15px; }
+    .bench-row { grid-template-columns:126px 1fr 96px; } .bench-row-lbl { font-size:12px; }
+    .h2h-row { grid-template-columns:140px 1fr 140px; }
+    .peer-row { grid-template-columns:152px 1fr 66px; }
+    .ba-cards { flex-wrap:wrap; } .ba-card { min-width:180px; }
+    .gpu-compare { gap:22px; } .gpu-slot, .gpu-unit { width:100px; }
+    .ov-cards { grid-template-columns:repeat(auto-fill,minmax(196px,1fr)); }
+  }
+  @media (max-width:430px) { .header-badge { display:none; } header h1 { font-size:15px; } }
+  @media (max-width:900px) {
+    body { height:auto; min-height:100vh; overflow:auto; }
+    header { position:sticky; top:0; z-index:60; padding:0 14px; gap:10px; }
+    header h1 { font-size:16px; }
+    .header-tagline { display:none; }
+    .header-badge { font-size:10.5px; padding:3px 8px; }
+    .menu-btn { display:block; }
+    .layout { flex-direction:column; overflow:visible; }
+    aside { position:fixed; top:60px; bottom:0; left:0; width:264px; z-index:55; transform:translateX(-100%); transition:transform .25s ease; box-shadow:0 0 40px rgba(0,0,0,0.6); }
+    aside.open { transform:translateX(0); }
+    .sb-backdrop { display:block; position:fixed; inset:60px 0 0 0; background:rgba(0,0,0,0.55); z-index:54; opacity:0; pointer-events:none; transition:opacity .25s; }
+    .sb-backdrop.on { opacity:1; pointer-events:auto; }
+    main { overflow:visible; padding:14px; }
+    .model-title-row { flex-direction:column; }
+    .chart-wrapper { height:200px; }
+    .cmp-hdr { display:none; }
+    .cmp-row { grid-template-columns:1fr 78px; grid-template-areas:'nm ratio' 'bar bar' 'ba ba'; gap:6px; padding:12px 0; }
+    .cmp-row > *:nth-child(1) { grid-area:nm; } .cmp-row > *:nth-child(2) { grid-area:bar; }
+    .cmp-row > *:nth-child(3) { grid-area:ba; text-align:left; } .cmp-row > *:nth-child(4) { grid-area:ratio; }
+    .cmp-ba-l { text-align:left; }
+    .bench-row { grid-template-columns:1fr 88px; grid-template-areas:'lbl lbl' 'track val'; gap:5px 10px; }
+    .bench-row > *:nth-child(1) { grid-area:lbl; text-align:left; }
+    .bench-row > *:nth-child(2) { grid-area:track; }
+    .bench-row > *:nth-child(3) { grid-area:val; text-align:right; font-size:15px; }
+    .bench-head { gap:8px; } .bench-delta { font-size:12.5px; padding:4px 10px; }
+    .h2h-row { grid-template-columns:1fr; gap:5px; } .h2h-name { text-align:left; }
+    .peer-row { grid-template-columns:1fr 62px; gap:6px; } .peer-name { text-align:left; }
+    .peer-row .peer-track { grid-column:1/-1; }
+    .rt-wrap { margin:44px 0 62px; } .rt-zone { font-size:0; } .rt-zone b { font-size:0; }
+    .rt-zone-legend { display:flex; margin:2px 0 14px; }
+    .rt-cap { font-size:10.5px; padding:3px 7px; }
+    .gpu-compare { gap:14px; } .gpu-slot, .gpu-unit { width:76px; }
+    .kh-num { font-size:38px; } .kh-unit { font-size:18px; }
+    .ov-cards { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); }
+    .metrics-row { flex-direction:column; } .metrics-divider { display:none; }
+  }
+
+  /* ═══════ 인쇄 / PDF 저장 ═══════ */
+  @media print {
+    @page { size:A4 landscape; margin:10mm; }
+    html, body { height:auto; overflow:visible; background:#0a0c10; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    header { position:static; }
+    aside, .menu-btn, .sb-backdrop, .cmp-controls, .overview-btn { display:none !important; }
+    .layout { display:block; }
+    main { overflow:visible; padding:0; display:block; }
+    main > * { margin-bottom:10px; }
+    .anim-0,.anim-1,.anim-2,.anim-3 { opacity:1 !important; transform:none !important; animation:none !important; }
+    .kimi-hero::after { display:none; }
+    .bench-card, .rt-card, .peer-card, .h2h, .gpu-panel, .chart-section, .metrics-section,
+    .svg-chart-card, .model-header-card, .kimi-hero, .cmp-table, .ov-hero { break-inside:avoid; page-break-inside:avoid; }
+    .bench-fill, .peer-fill, .cmp-fill, .h2h-fill, .llm-fill, .dc-fill, .bar { transition:none !important; }
+  }
+
+  /* ═══════ 사이드바 검색 ═══════ */
+  .sb-search-wrap { padding:8px 10px 4px; position:relative; }
+  .sb-search { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:9px; padding:8px 30px 8px 30px; color:var(--text); font-family:var(--font); font-size:13px; outline:none; transition:border-color .18s; }
+  .sb-search:focus { border-color:rgba(0,212,255,0.45); }
+  .sb-search::placeholder { color:#6b7280; }
+  .sb-ico { position:absolute; left:20px; top:50%; transform:translateY(-40%); font-size:12px; color:#4e5563; pointer-events:none; }
+  .sb-count { position:absolute; right:20px; top:50%; transform:translateY(-40%); font-size:10.5px; font-family:var(--mono); color:#4e5563; pointer-events:none; }
+  .model-btn:focus-visible, .ov-card:focus-visible, .cmp-row:focus-visible, .overview-btn:focus-visible {
+    outline:2px solid rgba(0,212,255,0.6); outline-offset:2px; }
+  .model-btn.kb { background:var(--surface2); border-color:#2c3444; color:var(--text); }
+  .sb-noresult { padding:18px 14px; font-size:12.5px; color:var(--muted); text-align:center; }
+  .kbd-hint { padding:12px 14px 16px; font-size:12px; color:#98a0b2; line-height:1.75; }
+  .kbd-hint .lead { display:block; color:#e0e5ef; font-size:12.5px; font-weight:600; margin-bottom:5px; }
+  .kbd-hint kbd { font-family:var(--mono); background:#212836; border:1px solid #303950; border-radius:4px; padding:1px 6px; font-size:10.5px; color:#c8cad0; }
+
+  /* ======= OVERVIEW ======= */
+  .ov-hero { background:linear-gradient(120deg,rgba(0,212,255,0.10),rgba(167,139,250,0.05) 60%,transparent); border:1px solid rgba(0,212,255,0.18); border-radius:18px; padding:22px 26px; }
+  .ov-hero h2 { font-size:24px; font-weight:800; color:#fff; margin-bottom:8px; letter-spacing:-0.02em; }
+  .ov-hero p { font-size:14px; color:#a8b4c8; line-height:1.65; max-width:900px; }
+  .ov-kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-top:18px; }
+  .ov-kpi { background:rgba(10,12,16,0.5); border:1px solid var(--border); border-radius:12px; padding:12px 16px; }
+  .ov-kpi-val { font-family:var(--mono); font-size:26px; font-weight:700; background:linear-gradient(135deg,#1ED2EB,#00a8c5); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1.15; }
+  .ov-kpi-lbl { font-size:12.5px; color:#8a90a0; margin-top:3px; }
+
+  .ov-group-title { font-size:13px; font-family:var(--mono); color:#c8cad0; letter-spacing:0.1em; text-transform:uppercase; margin-top:6px; display:flex; align-items:center; gap:10px; }
+  .ov-group-title::after { content:''; flex:1; height:1px; background:var(--border); }
+  .ov-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:11px; }
+  .ov-card { background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:14px 16px; cursor:pointer; transition:all 0.18s; display:flex; flex-direction:column; gap:5px; position:relative; overflow:hidden; text-align:left; font-family:var(--font); }
+  .ov-card:hover { border-color:rgba(0,212,255,0.4); background:var(--surface2); transform:translateY(-2px); }
+  .ov-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,#1ED2EB,transparent); }
+  .ov-card.p::before { background:linear-gradient(90deg,#a78bfa,transparent); }
+  .ov-card.g::before { background:linear-gradient(90deg,#34d399,transparent); }
+  .ov-card-name { font-size:14px; font-weight:700; color:#fff; line-height:1.3; }
+  .ov-card-hw { font-size:11.5px; color:#7a8296; font-family:var(--mono); }
+  .ov-card-val { font-family:var(--mono); font-size:21px; font-weight:700; color:#1ED2EB; margin-top:4px; line-height:1.1; }
+  .ov-card.p .ov-card-val { color:#a78bfa; }
+  .ov-card.g .ov-card-val { color:#34d399; }
+  .ov-card-lbl { font-size:12px; color:#8a90a0; }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="menu-btn" id="menuBtn" aria-label="목록 열기">☰</button>
+  <h1>NetsPresso <span>벤치마크</span> 북</h1>
+  <div class="header-right">
+    <span class="header-tagline">AI 모델 최적화 사례 · 서버부터 MCU까지</span>
+    <span class="header-badge">v4.1 · 고객사례 포함</span>
+  </div>
+</header>
+
+<div class="sb-backdrop" id="sbBackdrop"></div>
+<div class="layout">
+  <aside id="sidebar"></aside>
+  <main id="mainContent"></main>
+</div>
+
+<script>
+const BAR_COLORS = {
+  blue:   { fill:'linear-gradient(90deg,#1ED2EB,#12a0b5)', glow:'rgba(30,210,235,0.35)' },
+  purple: { fill:'linear-gradient(90deg,#a78bfa,#7c3aed)', glow:'rgba(167,139,250,0.35)' },
+  gray:   { fill:'linear-gradient(90deg,#9B9DA4,#6b6e76)', glow:'rgba(155,157,164,0.2)'  },
+  green:  { fill:'linear-gradient(90deg,#34d399,#059669)', glow:'rgba(52,211,153,0.35)'  },
+  orange: { fill:'linear-gradient(90deg,#fb923c,#ea580c)', glow:'rgba(251,146,60,0.35)'  },
+};
+
+const GROUPS = [
+  { key:'server',     label:'서버 · 대규모 LLM' },
+  { key:'ondevice',   label:'온디바이스 LLM · VLM' },
+  { key:'yolo',       label:'Vision · 객체 탐지 (YOLO)', short:'Vision · YOLO' },
+  { key:'industrial', label:'Vision · 산업용 탐지' },
+  { key:'edge',       label:'엣지 NPU · 임베디드' },
+  { key:'detail-cv',  label:'상세 벤치마크 · CV' },
+  { key:'detail-llm', label:'상세 벤치마크 · LLM/VLM', short:'상세 · LLM / VLM' },
+  { key:'customer',   label:'고객 도입 사례' },
+];
+const COLLAPSED_BY_DEFAULT = GROUPS.map(g => g.key).filter(k => k !== 'server');
+
+// ═══════════════════════════════════════════════════════════
+// MODELS
+// type: 'bench' (전/후 비교) | 'cv' (다중 디바이스 막대) | 'llm' (TTFT/디코딩)
+// ═══════════════════════════════════════════════════════════
+const models = [
+
+  /* ═══════════ 고객 도입 사례 ═══════════ */
+  {
+    type:'bench', group:'customer', name:'Arm', sub:'통합 AI 모델 포털',
+    task:'플랫폼 SDK · Arm 하드웨어 IP 전반', inputSize:'—',
+    hw:[{name:'Raspberry Pi 5', exec:'CPU'},{name:'Arm Ethos-U85', exec:'NPU'},{name:'Alif E8', exec:'MCU'}],
+    customer:'반도체 IP를 라이선싱하는 글로벌 반도체 설계 기업으로, 자사 아키텍처(Cortex-A·SME2·Neoverse 등) 기반 AI 모델 최적화 생태계를 확장 중',
+    context:{
+      background:'유저가 AI 모델을 직접 최적화할 수 있는 통합 툴이 필요했고, Arm 하드웨어 IP 위에서 동작하는 최적화 모델을 늘려 개발자 생태계를 넓히려는 전략적 목적으로 통합 AI 모델 포털 구축을 추진',
+      challenge:['Cortex-A · SME2 · Neoverse · Ethos-U 등 이질적 하드웨어 전반의 모델별 최적화 필요','임베디드 타깃 메모리 제약과 물리 디바이스팜 부재로 인한 검증 인프라 이슈'],
+      solution:['PTQ-static(INT8) 기반 양자화 및 그래프 최적화 적용','ExecuTorch(.pte) 포맷 변환 및 XNNPACK·KleidiAI 가속 라이브러리 연동','물리 디바이스가 없는 Ethos-U85는 MLIA 시뮬레이션 기반 추정치로 검증 인프라 보완']},
+    tech:['PTQ-static (INT8) 양자화','그래프 최적화','ExecuTorch (.pte) 변환','XNNPACK · KleidiAI 연동'],
+    beforeLabel:'최적화 전 (Original)', afterLabel:'NetsPresso 최적화',
+    metrics:[
+      { label:'추론 지연 (ResNet-18 · Raspberry Pi 5)', unit:'ms', before:32.14, after:9.36, lowerBetter:true },
+      { label:'메모리 사용량 (ResNet-18 · Raspberry Pi 5)', unit:'MB', before:90.69, after:26.67, lowerBetter:true },
+    ],
+    runtimeRows:[['공급 범위','Vision · LLM · Embedding 등 AI 모델 45종'],
+      ['타깃 디바이스','Raspberry Pi 5 · M4 MacBook · Alif E8 등 Arm 디바이스 6종']],
+    summary:'Arm 하드웨어 IP 전반에 최적화된 AI 모델 45종을 제공하는 통합 포털을 위해 NetsPresso 최적화 툴체인 모듈 공급',
+    headline:{ val:'71% 단축', lbl:'ResNet-18 지연 · 메모리 동시 절감', tone:'' }
+  },
+  {
+    type:'bench', group:'customer', name:'반도체 S사', sub:'SDK 포팅 자동화',
+    task:'플랫폼 SDK · 모델 포팅 자동화', inputSize:'—',
+    hw:[{name:'S사 자체 AI 칩', exec:'NPU'}],
+    customer:'자체 AI 칩과 SDK를 다수의 엔터프라이즈 고객사에 공급하는 반도체 기업',
+    context:{
+      background:'고객사들이 자체 SDK로 모델을 포팅할 때 연산자 비호환으로 실행이 실패하는 사례가 반복되며, 엔지니어링 리소스 낭비와 고객 만족도 저하로 이어짐',
+      challenge:['연산자(Operator) 비호환으로 고객 모델이 SDK에서 실행되지 않음','수동 대응으로 인한 엔지니어링 리소스 낭비 및 대응 지연'],
+      solution:['NetsPresso Graph Optimizer를 자체 SDK에 통합','연산자 자동 교체 및 호환성 검증 파이프라인 구축','수동 수정 없이 포팅 가능한 자동화 흐름으로 전환']},
+    tech:['NetsPresso Graph Optimizer SDK 통합','연산자 자동 교체','호환성 검증 파이프라인'],
+    beforeLabel:'기존 SDK (24시간 초과)', afterLabel:'NetsPresso SDK (1시간 이내)',
+    metrics:[
+      { label:'모델 최적화 작업 시간', unit:'시간', before:24, after:1, lowerBetter:true },
+    ],
+    runtimeRows:[['적용 모델 범위','Gen AI 모델 및 CV 모델 포함 200여 개'],
+      ['원 표기','기존 SDK 24시간 초과 → NetsPresso SDK 1시간 이내']],
+    summary:'자체 SDK의 모델 포팅 시간을 1일에서 1시간 이내로 단축(95% 절감)하고, 연산자 비호환 문제를 자동화 파이프라인으로 해결',
+    headline:{ val:'95% 단축', lbl:'포팅 시간 24시간 → 1시간 이내', tone:'g' }
+  },
+  {
+    type:'bench', group:'customer', name:'아이닉스', sub:'ENLIGHT NPU · YOLOv8m',
+    task:'객체 탐지 (Object Detection)', inputSize:'—',
+    hw:[{name:'ENLIGHT NPU (EN683 EVK)', exec:'NPU'}],
+    customer:'국내 반도체 설계기업으로, 자체 NPU(ENLIGHT)를 탑재한 엣지 AI 칩을 개발 중',
+    context:{
+      background:'자사 NPU 탑재 제품에서 실시간 객체탐지가 가능하도록, 하드웨어 특성에 맞춘 모델 경량화가 필요했음',
+      challenge:['NPU 하드웨어 특성(4bit 연산, 채널 최적화)에 맞지 않아 YOLOv8 실시간 처리에 한계','목표(mAP 손실 1% 이내) 충족'],
+      solution:['NPU 가이드라인 기반 모델 구조 변경','레이어별 민감도(Layer Sensitivity)를 자동 분석하는 프루닝 스크립트 개발','민감 레이어는 보존하고 덜 민감한 레이어 위주로 경량화']},
+    tech:['NPU 가이드라인 기반 구조 변경','레이어 민감도 자동 분석 프루닝'],
+    beforeLabel:'기존 모델', afterLabel:'NetsPresso 적용',
+    metrics:[
+      { label:'NPU 추론 시간', unit:'ms', before:68.4, after:57.9, lowerBetter:true },
+    ],
+    accuracyNote:'mAP 손실 1% 이내 — 고객 목표 조건 충족',
+    summary:'자체 ENLIGHT NPU에서 YOLOv8 추론 시간을 15% 단축하고, mAP 손실 1% 이내로 실시간 객체탐지 구현',
+    headline:{ val:'15% 단축', lbl:'68.4 → 57.9 ms · mAP 손실 1% 이내', tone:'' }
+  },
+  {
+    type:'bench', group:'customer', name:'모빌린트', sub:'ARIES NPU · VLM 객체탐지',
+    task:'개방형 어휘 객체 탐지 (OVD)', inputSize:'—',
+    hw:[{name:'ARIES NPU (80 TOPS)', exec:'NPU'}],
+    customer:'국내 AI 반도체(NPU) 팹리스 스타트업으로, 자체 NPU 기반 엣지 AI 솔루션을 확대 중',
+    context:{
+      background:'자사 NPU 고객에게 객체탐지(OVD) 기능을 제공하려 했으나, 표준 모델 구조가 NPU와 호환되지 않아 대체 모델 개발이 필요했음',
+      challenge:['Grounding DINO의 Deformable Attention 레이어가 Static 그래프만 지원하는 자사 NPU에서 배포 불가'],
+      solution:['NPU 호환 가능한 대안 VLM 모델 탐색 및 검증','반복 호출로 인한 성능 병목 구조 분석','DETR 스타일 통합 연산 헤드로 모델 재설계 및 재학습']},
+    tech:['Grounding DINO → DETR 스타일 헤드 재설계','통합 연산 헤드 재학습'],
+    beforeLabel:'기존 VLM 구조', afterLabel:'NetsPresso 적용',
+    metrics:[
+      { label:'추론 Latency', unit:'ms', before:1601.81, after:89.97, lowerBetter:true },
+    ],
+    accuracyNote:'RefCOCO 벤치마크 기준 정확도 86.6% — Base 모델 대비 가장 높은 정확도 달성',
+    summary:'NPU에 배포 불가능했던 VLM 기반 객체탐지 모델을 DETR 스타일 헤드로 재설계해 호환성과 성능을 동시에 확보',
+    headline:{ val:'17.8× 빠름', lbl:'1,601.81 → 89.97 ms', tone:'g' }
+  },
+  {
+    type:'bench', group:'customer', name:'텔레칩스', sub:'Dolphin5 NPU · CV 4종',
+    task:'모델 호환성 · 얼굴인식 · 깊이추정 · 분할 · 재식별', inputSize:'—',
+    hw:[{name:'Dolphin5 NPU', exec:'NPU'}],
+    customer:'국내 대표 차량용 반도체 기업으로, 차량용 AI 반도체 Dolphin 시리즈를 개발 중',
+    context:{
+      background:'Dolphin5 NPU 기반 AI 애플리케이션을 구성하기 위해, 여러 컴퓨터비전 모델을 NPU에서 구동 가능한 형태로 최적화할 필요가 있었음',
+      challenge:['AdaFace · MiDaS · PIDNet · OSNet 4개 모델이 Dolphin5 NPU에서 그대로 실행 불가'],
+      solution:['Torch → ONNX → TFLite(INT8) → TVM 컴파일 파이프라인 구축','모델별 맞춤 최적화: 연산자 분해, 백본 교체(MobileNetV2), 지식 증류','GEMM → 1x1 Conv 치환으로 양자화 오차 최소화 (공통 보정)']},
+    tech:['Torch → ONNX → TFLite(INT8) → TVM 파이프라인','연산자 분해 · 백본 교체 · 지식 증류','GEMM → 1x1 Conv 치환'],
+    beforeLabel:'포팅 전', afterLabel:'NetsPresso 적용',
+    metrics:[
+      { label:'NPU 구동 가능 모델 수', unit:'종', before:0, after:4, lowerBetter:false, unlock:true },
+    ],
+    runtimeRows:[['대상 모델','AdaFace(얼굴인식) · MiDaS(깊이추정) · PIDNet(분할) · OSNet(재식별)']],
+    summary:'Dolphin5 NPU에서 실행이 불가능하던 컴퓨터비전 모델 4종을 경량화·컴파일하여 전 모델 구동 성공',
+    headline:{ val:'0 → 4종', lbl:'NPU 구동 가능 모델 (100% 확보)', tone:'g' }
+  },
+  {
+    type:'bench', group:'customer', name:'SK텔레콤', sub:'온디바이스·서버 하이브리드',
+    task:'AI Application · 악성코드 탐지', inputSize:'—',
+    hw:[{name:'Android 스마트폰 (온디바이스)', exec:'CPU'},{name:'서버 (하이브리드)', exec:'GPU'}],
+    customer:'국내 대표 통신사로, AI·보안 기술을 통신 서비스 전반으로 확장 중',
+    context:{
+      background:'자사 앱 생태계의 보안성을 높이기 위해, 단말 비용 부담 없이도 높은 탐지 정확도를 유지하는 악성코드 탐지 체계가 필요했음',
+      challenge:['단말 추론 비용과 탐지 정확도 사이 trade-off 문제','온디바이스 모델과 서버 모델을 결합한 하이브리드 AI 구조 필요'],
+      solution:['소스코드·바이트코드·메타정보를 결합한 멀티모달 malware 탐지 모델 설계','온디바이스 / 서버 이중 구조 및 라우팅 메커니즘 개발','하이브리드 추론을 지원하는 Android 애플리케이션 개발']},
+    tech:['멀티모달 탐지 모델 (UniXcoder + Vision Transformer + LLM)','온디바이스·서버 라우팅 메커니즘'],
+    beforeLabel:'경쟁 보안 솔루션 (최고)', afterLabel:'NetsPresso 하이브리드',
+    metrics:[
+      { label:'악성코드 탐지 정확도', unit:'%', before:86.74, after:91.67, lowerBetter:false },
+    ],
+    runtimeRows:[['상용 백신 비교','Alyac 86.74% · V3 78.99%']],
+    summary:'Android 악성코드 탐지용 멀티모달 AI를 온디바이스·서버 하이브리드 구조로 구축해 상용 보안 솔루션 대비 높은 탐지 성능 달성',
+    headline:{ val:'91.67%', lbl:'탐지 정확도 (상용 최고 86.74%)', tone:'g' }
+  },
+  {
+    type:'bench', group:'customer', name:'두원전자통신', sub:'Jetson Orin NX · 저조도 개선',
+    task:'AI Application · 저조도 영상 개선', inputSize:'1080p',
+    hw:[{name:'NVIDIA Jetson Orin NX', exec:'GPU'}],
+    customer:'국내 CCTV·영상보안 장비 제조사로, AI 기반 영상분석 기능을 탑재한 제품을 확대 중',
+    context:{
+      background:'야간·저조도 환경에서 CCTV 영상 분석 정확도가 떨어지는 문제를 해결하기 위해, 엣지 디바이스에서 실시간 구동 가능한 저조도 개선 모델이 필요했음',
+      challenge:['기존 ERNet 모델 Latency 180ms로 1080p 30FPS 실시간 요구사항 미달','INT8 양자화·프루닝 적용해도 속도 개선 효과 미미, 화질 저하 발생'],
+      solution:['여러 공개 저조도 개선 모델(RAUS, Zero-DCE 등) 검증 후 요구성능 미달 확인','YUV 색공간 기반 경량 모델 자체 설계 — Y채널만 다운샘플링 처리 후 원본 UV와 합성']},
+    tech:['YUV 색공간 기반 경량 모델 자체 설계','Y채널 선택 처리 후 원본 UV 합성'],
+    beforeLabel:'기존 ERNet', afterLabel:'자체 설계 모델',
+    metrics:[
+      { label:'추론 Latency', unit:'ms', before:180, after:28, lowerBetter:true },
+    ],
+    accuracyNote:'밝기 채널 중심 처리로 화질 유지 — 목표 30FPS 상회 달성',
+    summary:'Jetson Orin NX에서 저조도 영상 개선 모델을 자체 설계해, 기존 대비 6배 이상 속도를 개선하고 1080p 실시간 처리 달성',
+    headline:{ val:'6.4× 빠름', lbl:'180 → 28 ms · 30FPS 상회', tone:'' }
+  },
+  {
+    type:'bench', group:'customer', name:'더웨이브톡', sub:'STM32 MCU · 수질 분석',
+    task:'AI Application · 수질 분석 (HTCNN)', inputSize:'—',
+    hw:[{name:'STM32H747 (Cortex-M7 + M4)', exec:'MCU'}],
+    customer:'국내 수질 분석 기기 제조 스타트업으로, AI 기반 휴대용 수질 검사 장비를 개발 중',
+    context:{
+      background:'PC 기반으로 수행하던 수질 분석 모델을, 휴대용 기기(MCU)에서도 동일한 정확도로 실시간 처리할 수 있도록 임베디드 소프트웨어 개발이 필요했음',
+      challenge:['자체 개발 C++ 앱의 추론 파이프라인 버그로 제품 적용 불가','MCU 제한된 환경에서 5분 내 300회 추론 요구사항 충족 필요'],
+      solution:['TFLite 양자화 모델 입력 전처리 누락 등 근본 원인 분석 및 버그 수정','카메라 연동 포함 End-to-End 파이프라인 신규 구축 (캡처→저장→전처리→추론→리포트)','스트리밍 기반 1-batch 추론으로 MCU 메모리 사용량 최소화']},
+    tech:['TFLite 양자화 파이프라인 재구축','스트리밍 기반 1-batch 추론'],
+    beforeLabel:'목표 요구 시간', afterLabel:'실제 달성',
+    metrics:[
+      { label:'추론 시간', unit:'초', before:300, after:2.4, lowerBetter:true },
+    ],
+    accuracyNote:'PC 소프트웨어와 100% 동일한 정확도 확보',
+    summary:'수질검사 기기 MCU에 AI 모델을 탑재해 목표 대비 추론 시간을 125배 단축하고, PC 소프트웨어와 동일한 정확도 확보',
+    headline:{ val:'125× 빠름', lbl:'목표 300초 → 실제 2.4초', tone:'g' }
+  },
+
+  /* ─────────── 서버 · 대규모 LLM ─────────── */
+  {
+    type:'bench', group:'server', name:'Solar Open2 250B', sub:'MoE 경량화',
+    task:'대규모 언어 모델 (MoE)', inputSize:'텍스트',
+    hw:[{name:'NVIDIA H100', exec:'GPU'}],
+    spec:'총 <strong>2,500억 개</strong>의 매개변수를 갖춘 업스테이지의 모델로, 실제 작업 시에는 필요한 <strong>150억 개</strong>만 활성화하는 MoE(전문가 혼합) 구조를 채택',
+    tech:['PASCAL-MoE — 캘리브레이션 데이터 합성 기반 4비트 MoE 양자화','라우터 인지형 MoE 양자화','비균일 전역 프루닝'],
+    beforeLabel:'BF16 원본', afterLabel:'노타 MoE 양자화 + 프루닝',
+    metrics:[
+      { label:'추론 성능 (평균 점수)', unit:'점', before:81.57, after:81.17, lowerBetter:false, keep:true, keepText:'99.5% 유지' },
+      { label:'가중치 메모리 사용량', unit:'GB', before:500.6, after:117.8, lowerBetter:true },
+      { label:'GPU 사용량 (H100)', unit:'장', before:8, after:2, lowerBetter:true },
+    ],
+    accuracyNote:'추론 평균 점수 81.57 → 81.17 (원본 대비 99.5% 유지)',
+    summary:'추론 성능은 99.5% 수준으로 유지하며, 성능 저하 없이 메모리 및 GPU 사용량 약 76% 절감',
+    footnote:'경량화 모델 Hugging Face 공개 2주 만에 모델 누적 다운로드 6만 8,000회 달성',
+    headline:{ val:'8 → 2장', lbl:'H100 GPU 사용량 (75% 절감)', tone:'' }
+  },
+  {
+    type:'bench', group:'server', name:'Kimi K3', sub:'비균일 전문가 프루닝',
+    task:'초거대 언어 모델 (3T급 MoE)', inputSize:'텍스트',
+    hw:[{name:'NVIDIA B300', exec:'GPU'}],
+    spec:'총 <strong>2조 8,000억 개</strong>의 매개변수를 갖춘 문샷AI의 모델로, MoE(전문가 혼합) 구조의 <strong>세계 최초 3T급 오픈웨이트 대형 언어 모델</strong>',
+    tech:['Non-uniform Expert Pruning (노타 자체 기술)','기존 방식: REAP — 모든 층의 전문가 모듈을 동일 비율 제거'],
+    beforeLabel:'원본 (2.8T)', afterLabel:'노타 비균일 전문가 프루닝',
+    customChart:'kimi',
+    metrics:[
+      { label:'벤치마크 평균 점수 (25% 경량화 · 2.1T)', unit:'점', before:83.5, after:84.0, lowerBetter:false, keep:true, keepText:'원본 상회' },
+      { label:'GPU 사용량 (B300, 50% 경량화 시)', unit:'장', before:8, after:4, lowerBetter:true },
+    ],
+    accuracyNote:'벤치마크 평균 점수 83.5(원본) → 84.0 (25% 경량화 시 원본 상회)',
+    summary:'25% 경량화 시 원본 모델 성능을 상회, 50% 경량화 시 GPU 사용량 절반 (8장 → 4장)',
+    footnote:'기존 REAP 대비 노타의 비균일 전문가 프루닝 적용 시 성능 우위 — 0.7T 더 적은 파라미터로 원본 성능 상회',
+    headline:{ val:'0.7T ↓', lbl:'더 적은 파라미터로 원본 성능 상회', tone:'' }
+  },
+  {
+    type:'bench', group:'server', name:'Solar-Open-100B', sub:'서버 MoE 양자화',
+    task:'대규모 언어 모델 (MoE) · 서버', inputSize:'텍스트',
+    hw:[{name:'NVIDIA A100 (서버)', exec:'GPU'}],
+    tech:['NotaMoEQuant — Value/Structure Alignment Loss 기반 MoE 양자화','Sigmoid-aware Alignment'],
+    runtimeRows:[['과제','과학기술정보통신부 주관 국가 AI 파운데이션 모델 프로젝트 (업스테이지 컨소시엄) 1차'],
+      ['서빙 하드웨어','NVIDIA A100 (서버)'],
+      ['서빙 엔진 선정','vLLM · SGLang 비교 분석 후 최적 엔진 선정'],
+      ['채택 현황','Upstage 공식 양자화 모델로 채택']],
+    beforeLabel:'기존 BF16 서빙', afterLabel:'NotaMoEQuant 적용',
+    metrics:[
+      { label:'GPU 사용량 (NVIDIA A100)', unit:'대', before:4, after:2, lowerBetter:true },
+      { label:'메모리 사용량', unit:'GB', before:58, after:16, lowerBetter:true },
+    ],
+    summary:'A100 GPU 4대·메모리 58GB가 필요하던 MoE 모델을 GPU 2대, 16GB로 서빙하도록 최적화',
+    headline:{ val:'A100 4 → 2대', lbl:'메모리 70% 절감 (58 → 16GB)', tone:'' }
+  },
+  {
+    type:'bench', group:'server', name:'Solar-31B', sub:'하이퍼엑셀 LPU',
+    task:'대규모 언어 모델 (31B 파라미터)', inputSize:'텍스트',
+    hw:[{name:'하이퍼엑셀 LPU (서버향)', exec:'NPU'}],
+    customer:'국내 AI 반도체 스타트업으로, LLM 추론에 특화된 LPU(Latency Processing Unit) 칩을 개발 중',
+    tech:['MXFP4 Microscaling 양자화','AWQ','Mixed Precision Quantization'],
+    runtimeRows:[['양자화 엔진','NetsPresso Core V2 · Advanced Quantizer'],
+      ['정밀도 변환','BF16 → MXFP 4-bit'],
+      ['고객 요구 조건','압축률 1/3 이상 · MMLU 정확도 90% 이상 유지'],
+      ['검증 기간 단축','신규 모델·데이터타입 검증 약 3주 → 1주']],
+    beforeLabel:'원본 모델 (BF16)', afterLabel:'MXFP4 양자화',
+    metrics:[
+      { label:'모델 크기', unit:'GB', before:61.8, after:19.94, lowerBetter:true },
+    ],
+    accuracyNote:'성능 손실 1% 미만 — 고객 요구 수준(정확도 10% 이내 손실)을 크게 상회 달성',
+    summary:'Solar-31B에 MXFP4 양자화를 적용해 모델 크기를 68% 줄이면서, 고객 요구 수준을 크게 상회하는 1% 미만 손실 달성',
+    headline:{ val:'68% 절감', lbl:'61.8 → 19.94GB · 손실 1% 미만', tone:'p' }
+  },
+
+  {
+    type:'bench', group:'server', name:'Qwen3-8B', sub:'AWS Inferentia 서빙',
+    task:'대규모 언어 모델 (LLM) · 클라우드 추론', inputSize:'텍스트',
+    hw:[{name:'AWS Inferentia2 (NeuronX)', exec:'NPU'}],
+    tech:['NeuronX Distributed Inference(NxDI) 호환 고급 양자화','민감도 분석 기반 선택적 양자화'],
+    beforeLabel:'NVIDIA A100 인스턴스', afterLabel:'Inferentia2 + 노타 경량화',
+    metrics:[
+      { label:'LLM 서빙 비용 (상대값)', unit:'%', before:100, after:58.13, lowerBetter:true },
+    ],
+    accuracyNote:'NxDI 기본 양자화 대비 정확도 21% 향상 — 원본 모델 대비 95.8% 수준 유지',
+    runtimeRows:[['추론 환경','AWS Neuron SDK · NeuronX Distributed Inference (NxDI)'],
+      ['양자화 방식','per-channel symmetric + 민감도 분석 기반 레이어 선택적 양자화']],
+    summary:'AWS 추론 전용 칩셋 Inferentia2에 맞춘 고급 양자화로, 동급 A100 인스턴스 대비 서빙 비용을 58% 수준까지 낮추면서 원본 대비 95.8% 정확도를 유지',
+    headline:{ val:'58.13%', lbl:'A100 인스턴스 대비 서빙 비용', tone:'g' }
+  },
+
+  /* ─────────── 온디바이스 LLM · VLM ─────────── */
+  {
+    type:'bench', group:'ondevice', name:'Llava-1.5 (7B)', sub:'모델 크기 75% 절감',
+    task:'비전-언어 모델 (VLM)', inputSize:'336×336',
+    hw:[{name:'Qualcomm IQ-9 (QCS9075)', exec:'NPU'}],
+    tech:['4-bit 가중치 양자화 (Mixed-Precision)'],
+    beforeLabel:'원본 모델', afterLabel:'노타 경량화 모델',
+    metrics:[
+      { label:'모델 크기', unit:'GB', before:13.4, after:3.2, lowerBetter:true },
+    ],
+    runtimeRows:[['디바이스 사양','Qualcomm IQ-9 (QCS9075) · DRAM 36GB · 50 TOPS(INT8) · single HTP'],
+      ['컨텍스트 길이','2,048 토큰'],],
+    summary:'13.4GB 크기로 배포 불가능했던 모델을 3.2GB 모델로 만들어 온디바이스 배포 가능하게 최적화',
+    headline:{ val:'13.4 → 3.2GB', lbl:'온디바이스 배포 실현', tone:'' }
+  },
+  {
+    type:'bench', group:'ondevice', name:'Llava-1.5 (7B)', sub:'추론 속도 77% 향상',
+    task:'비전-언어 모델 (VLM)', inputSize:'336×336',
+    hw:[{name:'Snapdragon 8 Gen 3', exec:'NPU'}],
+    tech:['Speculative Decoding'],
+    beforeLabel:'원본 모델', afterLabel:'노타 경량화 모델',
+    metrics:[
+      { label:'디코딩 속도', unit:'token/s', before:10.93, after:19.38, lowerBetter:false },
+    ],
+    accuracyNote:'Speculative Decoding은 원 모델의 출력 분포를 그대로 보존하는 기법으로, 응답 품질 변화가 없습니다',
+    runtimeRows:[['디바이스 사양','Snapdragon 8 Gen 3 · DRAM 16GB · 50 TOPS(INT8)'],
+      ['컨텍스트 길이','2,048 토큰'],
+      ['Speculative Decoding 배속','×1.77'],],
+    summary:'초당 10.93토큰을 처리하던 모델을 초당 19.38토큰을 처리하도록 최적화 (Speculative Decoding ×1.77)',
+    headline:{ val:'19.38 tok/s', lbl:'추론 속도 77% 향상', tone:'g' }
+  },
+  {
+    type:'bench', group:'ondevice', name:'Llama-3.1 (8B)', sub:'QAIHub 대비 양자화 개선',
+    task:'언어 모델 (LLM)', inputSize:'텍스트',
+    hw:[{name:'QCS9075 / 8275 (proxy)', exec:'NPU'}],
+    tech:['민감도 분석 기반 양자화 (SimMSE)'],
+    beforeLabel:'QAIHub Model Zoo 양자화 모델', afterLabel:'노타 SimMSE 양자화',
+    metrics:[
+      { label:'Prefill 속도', unit:'token/s', before:3.31, after:4.2, lowerBetter:false },
+      { label:'Decode 속도', unit:'token/s', before:5.35, after:6.16, lowerBetter:false },
+      { label:'활성 메모리', unit:'GB', before:1.197, after:1.115, lowerBetter:true },
+    ],
+    accuracyNote:'지시 이행 BARTScore −2.8927 → −2.7196 · 요약 BARTScore −4.954 → −4.3708 — 응답 품질 개선',
+    runtimeRows:[
+      ['측정 조건','prefill 4,096 토큰 · context 8,192 토큰'],
+      ['활성값 정밀도 배분','INT8:INT16 = 26.6%:73.4% → 31.0%:69.0%'],
+      ['가중치 양자화','Unknown(QAIHub) → SimMSE(노타)'],],
+    summary:'민감도 분석 기반 양자화(SimMSE)로 활성 메모리를 7% 줄이면서 Prefill·Decode 속도를 동시에 향상',
+    headline:{ val:'+27% / +15%', lbl:'Prefill / Decode (QAIHub 대비)', tone:'p' }
+  },
+
+  /* ─────────── Vision · 객체 탐지 (YOLO) ─────────── */
+  {
+    type:'bench', group:'yolo', name:'YOLOX-s', sub:'640×640',
+    task:'객체 탐지 (Object Detection)', inputSize:'640×640',
+    hw:[{name:'Qualcomm QRB5165', exec:'DSP'}],
+    tech:['모델 경량화','INT8 양자화'],
+    beforeLabel:'원본 모델 (DSP)', afterLabel:'노타 경량화 모델',
+    metrics:[ { label:'추론 지연 (DSP)', unit:'ms', before:122.6, after:29.2, lowerBetter:true } ],
+    runtimeRows:[['런타임 · SDK','Qualcomm SNPE SDK (RB5 / QRB5165)'],['최적화 단계별 DSP 지연','원본 122.6 → INT8 양자화만 35.1 → 경량화만 107.4 → 경량화+양자화 29.2 ms'],['CPU 기준 참고값','원본 698.2 ms — CPU 대비 DSP 최종 23.9배'],['GPU 기준 참고값','원본 141.56 ms'],['DSP 측정 편차','121.8 ~ 123.8 ms'],['배치','batch 1']],
+    summary:'DSP 추론에 122.6ms가 걸리던 모델을 29.2ms로 4.2배 빠르게 추론하도록 최적화',
+    headline:{ val:'4.2× 빠름', lbl:'122.6 → 29.2 ms', tone:'' }
+  },
+  {
+    type:'bench', group:'yolo', name:'YOLOv5n', sub:'640×640',
+    task:'객체 탐지 (Object Detection)', inputSize:'640×640',
+    hw:[{name:'Qualcomm QRB5165', exec:'DSP'}],
+    tech:['모델 경량화','INT8 양자화'],
+    beforeLabel:'원본 모델 (DSP)', afterLabel:'노타 경량화 모델',
+    metrics:[ { label:'추론 지연 (DSP)', unit:'ms', before:46.4, after:17.1, lowerBetter:true } ],
+    runtimeRows:[['런타임 · SDK','Qualcomm SNPE SDK (RB5 / QRB5165)'],['최적화 단계별 DSP 지연','원본 46.4 → INT8 양자화만 18.0 → 경량화만 39.6 → 경량화+양자화 17.1 ms'],['CPU 기준 참고값','원본 239.6 ms — CPU 대비 DSP 최종 14.0배'],['GPU 기준 참고값','원본 36.6 ms'],['DSP 측정 편차','46.0 ~ 47.2 ms'],['배치','batch 1']],
+    summary:'DSP 추론에 46.4ms가 걸리던 모델을 17.1ms로 2.7배 빠르게 추론하도록 최적화',
+    headline:{ val:'2.7× 빠름', lbl:'46.4 → 17.1 ms', tone:'' }
+  },
+  {
+    type:'bench', group:'yolo', name:'YOLOv7', sub:'640×640',
+    task:'객체 탐지 (Object Detection)', inputSize:'640×640',
+    hw:[{name:'Qualcomm QRB5165', exec:'DSP'}],
+    tech:['모델 경량화','INT8 양자화'],
+    beforeLabel:'원본 모델 (DSP)', afterLabel:'노타 경량화 모델',
+    metrics:[ { label:'추론 지연 (DSP)', unit:'ms', before:435.4, after:75.2, lowerBetter:true } ],
+    runtimeRows:[['런타임 · SDK','Qualcomm SNPE SDK (RB5 / QRB5165)'],['최적화 단계별 DSP 지연','원본 435.4 → INT8 양자화만 85.3 → 경량화만 360.6 → 경량화+양자화 75.2 ms'],['CPU 기준 참고값','원본 2066.3 ms — CPU 대비 DSP 최종 27.5배'],['GPU 기준 참고값','원본 476.0 ms'],['배치','batch 1']],
+    summary:'DSP 추론에 435.4ms가 걸리던 모델을 75.2ms로 5.8배 빠르게 추론하도록 최적화',
+    headline:{ val:'5.8× 빠름', lbl:'435.4 → 75.2 ms', tone:'' }
+  },
+
+  /* ─────────── Vision · 산업용 탐지 (QCS6490) ─────────── */
+  {
+    type:'bench', group:'industrial', name:'People Detection', sub:'320×320',
+    task:'사람 탐지 (Vision)', inputSize:'320×320',
+    hw:[{name:'Qualcomm QCS6490', exec:'DSP'}],
+    tech:['FP32 → INT8 양자화'],
+    beforeLabel:'원본 모델 (CPU·FP32)', afterLabel:'노타 경량화 모델 (DSP·INT8)',
+    metrics:[ { label:'추론 지연', unit:'ms', before:36.99, after:2.05, lowerBetter:true } ],
+    runtimeRows:[['런타임 · SDK','Qualcomm SNPE 2.20.0 (QCS6490-ODK / LaunchX)'],['배치 · 입력','batch 1 · 3ch'],['GPU FP16 참고값','19.79 ms'],['AIP INT8 참고값','2.03 ms'],['DLC 모델 크기','fp32 591KB / int8 265KB'],['DSP 처리량','486.8 inference/s']],
+    summary:'CPU(FP32) 추론에 36.99ms가 걸리던 모델을 FP32→INT8 양자화로 DSP에서 2.05ms로 단축',
+    headline:{ val:'94% 단축', lbl:'36.99 → 2.05 ms', tone:'' }
+  },
+  {
+    type:'bench', group:'industrial', name:'Vehicle Detection', sub:'256×256',
+    task:'차량 탐지 (Vision)', inputSize:'256×256',
+    hw:[{name:'Qualcomm QCS6490', exec:'DSP'}],
+    tech:['FP32 → INT8 양자화'],
+    beforeLabel:'원본 모델 (CPU·FP32)', afterLabel:'노타 경량화 모델 (DSP·INT8)',
+    metrics:[ { label:'추론 지연', unit:'ms', before:33.9, after:1.65, lowerBetter:true } ],
+    runtimeRows:[['런타임 · SDK','Qualcomm SNPE 2.20.0 (QCS6490-ODK / LaunchX)'],['배치 · 입력','batch 1 · 3ch'],['GPU FP16 참고값','13.63 ms'],['AIP INT8 참고값','1.65 ms'],['DLC 모델 크기','fp32 526KB / int8 236KB'],['DSP 처리량','635.3 inference/s']],
+    summary:'CPU(FP32) 추론에 33.9ms가 걸리던 모델을 FP32→INT8 양자화로 DSP에서 1.65ms로 단축',
+    headline:{ val:'95% 단축', lbl:'33.9 → 1.65 ms', tone:'' }
+  },
+  {
+    type:'bench', group:'industrial', name:'Vehicle Detection', sub:'640×640',
+    task:'차량 탐지 (Vision)', inputSize:'640×640',
+    hw:[{name:'Qualcomm QCS6490', exec:'DSP'}],
+    tech:['FP32 → INT8 양자화'],
+    beforeLabel:'원본 모델 (CPU·FP32)', afterLabel:'노타 경량화 모델 (DSP·INT8)',
+    metrics:[ { label:'추론 지연', unit:'ms', before:349.7, after:6.16, lowerBetter:true } ],
+    runtimeRows:[['런타임 · SDK','Qualcomm SNPE 2.20.0 (QCS6490-ODK / LaunchX)'],['배치 · 입력','batch 1 · 3ch'],['GPU FP16 참고값','37.5 ms'],['AIP INT8 참고값','5.35 ms'],['DLC 모델 크기','fp32 17.3MB / int8 5.1MB'],['DSP 처리량','162.3 inference/s']],
+    summary:'CPU(FP32) 추론에 349.7ms가 걸리던 모델을 FP32→INT8 양자화로 DSP에서 6.16ms로 단축',
+    headline:{ val:'98% 단축', lbl:'349.7 → 6.16 ms', tone:'' }
+  },
+  {
+    type:'bench', group:'industrial', name:'Hand Detection', sub:'416×416',
+    task:'손 탐지 (Vision)', inputSize:'416×416',
+    hw:[{name:'Qualcomm QCS6490', exec:'DSP'}],
+    tech:['FP32 → INT8 양자화'],
+    beforeLabel:'원본 모델 (CPU·FP32)', afterLabel:'노타 경량화 모델 (DSP·INT8)',
+    metrics:[ { label:'추론 지연', unit:'ms', before:234.1, after:5.46, lowerBetter:true } ],
+    runtimeRows:[['런타임 · SDK','Qualcomm SNPE 2.20.0 (QCS6490-ODK / LaunchX)'],['배치 · 입력','batch 1 · 3ch'],['GPU FP16 참고값','32.55 ms'],['AIP INT8 참고값','5.41 ms'],['DLC 모델 크기','fp32 26.8MB / int8 7.3MB'],['DSP 처리량','183.2 inference/s']],
+    summary:'CPU(FP32) 추론에 234.1ms가 걸리던 모델을 FP32→INT8 양자화로 DSP에서 5.46ms로 단축',
+    headline:{ val:'98% 단축', lbl:'234.1 → 5.46 ms', tone:'' }
+  },
+  {
+    type:'bench', group:'industrial', name:'IR 보행자 탐지', sub:'416×416',
+    task:'적외선 보행자 탐지 (Vision)', inputSize:'416×416',
+    hw:[{name:'Qualcomm QCS6490', exec:'DSP'}],
+    tech:['FP32 → INT8 양자화'],
+    beforeLabel:'원본 모델 (CPU·FP32)', afterLabel:'노타 경량화 모델 (DSP·INT8)',
+    metrics:[ { label:'추론 지연', unit:'ms', before:713.8, after:7.24, lowerBetter:true } ],
+    runtimeRows:[['런타임 · SDK','Qualcomm SNPE 2.20.0 (QCS6490-ODK / LaunchX)'],['배치 · 입력','batch 1 · 3ch'],['GPU FP16 참고값','61.28 ms'],['AIP INT8 참고값','7.14 ms'],['DLC 모델 크기','fp32 98.9MB / int8 25.7MB'],['DSP 처리량','138.2 inference/s']],
+    summary:'CPU(FP32) 추론에 713.8ms가 걸리던 모델을 DSP(INT8)에서 7.24ms로 추론하도록 최적화',
+    headline:{ val:'99% 단축', lbl:'713.8 → 7.24 ms', tone:'g' }
+  },
+  {
+    type:'bench', group:'industrial', name:'Face Detection', sub:'320×320',
+    task:'얼굴 탐지 (Vision)', inputSize:'320×320',
+    hw:[{name:'Qualcomm QCS6490', exec:'DSP'}],
+    tech:['FP32 → INT8 양자화'],
+    beforeLabel:'원본 모델 (CPU·FP32)', afterLabel:'노타 경량화 모델 (DSP·INT8)',
+    metrics:[ { label:'추론 지연', unit:'ms', before:27.35, after:1.48, lowerBetter:true } ],
+    runtimeRows:[['런타임 · SDK','Qualcomm SNPE 2.20.0 (QCS6490-ODK / LaunchX)'],['배치 · 입력','batch 1 · 3ch'],['GPU FP16 참고값','11.35 ms'],['AIP INT8 참고값','1.46 ms'],['DLC 모델 크기','fp32 420KB / int8 188KB'],['DSP 처리량','675.7 inference/s']],
+    summary:'CPU(FP32) 추론에 27.35ms가 걸리던 모델을 DSP(INT8)에서 1.48ms로 추론하도록 최적화',
+    headline:{ val:'95% 단축', lbl:'27.35 → 1.48 ms', tone:'' }
+  },
+  {
+    type:'bench', group:'industrial', name:'Helmet Detection', sub:'416×416',
+    task:'안전모 탐지 (Vision)', inputSize:'416×416',
+    hw:[{name:'Qualcomm QCS6490', exec:'DSP'}],
+    tech:['FP32 → INT8 양자화'],
+    beforeLabel:'원본 모델 (CPU·FP32)', afterLabel:'노타 경량화 모델 (DSP·INT8)',
+    metrics:[ { label:'추론 지연', unit:'ms', before:270.08, after:6.12, lowerBetter:true } ],
+    runtimeRows:[['런타임 · SDK','Qualcomm SNPE 2.20.0 (QCS6490-ODK / LaunchX)'],['배치 · 입력','batch 1 · 3ch'],['GPU FP16 참고값','38.21 ms'],['AIP INT8 참고값','6.08 ms'],['DLC 모델 크기','fp32 30.1MB / int8 8.2MB'],['DSP 처리량','163.4 inference/s']],
+    summary:'CPU(FP32) 추론에 270.08ms가 걸리던 모델을 DSP(INT8)에서 6.12ms로 추론하도록 최적화',
+    headline:{ val:'98% 단축', lbl:'270.08 → 6.12 ms', tone:'' }
+  },
+
+  /* ─────────── 엣지 NPU · 임베디드 ─────────── */
+  {
+    type:'bench', group:'edge', name:'VGG19', sub:'Arm Ethos-U55',
+    task:'객체 탐지 (Vision)', inputSize:'—',
+    hw:[{name:'Arm Ethos-U55', exec:'NPU'}],
+    tech:['Nota_Search — 구조 탐색 기반 경량화','NPU 미지원 연산 블록 치환'],
+    beforeLabel:'원본 모델', afterLabel:'노타 경량화 모델',
+    metrics:[ { label:'추론 지연', unit:'ms', before:27.04, after:2.38, lowerBetter:true } ],
+    accuracyNote:'Top-1 정확도 FP32 72.28% → 71.14% (−1.14%p) · INT8 72.21% → 70.74% (−1.47%p)',
+    runtimeRows:[['연산량 (FLOPs)','796.79M → 110.09M (86% 감소)'],['파라미터','20.1M → 0.7M (97% 감소)'],['NPU 사이클','13,521,097 → 1,189,097']],
+    summary:'구조 탐색 기반 경량화로 연산량 86%·파라미터 97%를 줄여 추론 지연 91% 단축',
+    headline:{ val:'91% 단축', lbl:'27.04 → 2.38 ms', tone:'p' }
+  },
+  {
+    type:'bench', group:'edge', name:'ResNet50', sub:'Arm Ethos-U55',
+    task:'객체 탐지 (Vision)', inputSize:'—',
+    hw:[{name:'Arm Ethos-U55', exec:'NPU'}],
+    tech:['Nota_Search — 구조 탐색 기반 경량화','NPU 미지원 연산 블록 치환'],
+    beforeLabel:'원본 모델', afterLabel:'노타 경량화 모델',
+    metrics:[ { label:'추론 지연', unit:'ms', before:48.97, after:9.64, lowerBetter:true } ],
+    accuracyNote:'Top-1 정확도 FP32 78.03% → 76.63% (−1.4%p) · INT8 77.81% → 75.9% (−1.91%p)',
+    runtimeRows:[['연산량 (FLOPs)','2596.06M → 224.7M (91% 감소)'],['파라미터','23.7M → 2.2M (91% 감소)'],['NPU 사이클','24,486,182 → 4,822,182']],
+    summary:'구조 탐색 기반 경량화로 연산량 91%·파라미터 91%를 줄여 추론 지연 80% 단축',
+    headline:{ val:'80% 단축', lbl:'48.97 → 9.64 ms', tone:'p' }
+  },
+  {
+    type:'bench', group:'edge', name:'VGG19', sub:'Arm Ethos-U65',
+    task:'객체 탐지 (Vision)', inputSize:'—',
+    hw:[{name:'Arm Ethos-U65', exec:'NPU'}],
+    tech:['Nota_Search — 구조 탐색 기반 경량화','NPU 미지원 연산 블록 치환'],
+    beforeLabel:'원본 모델', afterLabel:'노타 경량화 모델',
+    metrics:[ { label:'추론 지연', unit:'ms', before:6.33, after:0.64, lowerBetter:true } ],
+    accuracyNote:'Top-1 정확도 FP32 72.28% → 71.14% (−1.14%p) · INT8 72.21% → 70.74% (−1.47%p)',
+    runtimeRows:[['연산량 (FLOPs)','796.79M → 110.09M (86% 감소)'],['파라미터','20.1M → 0.7M (97% 감소)'],['NPU 사이클','6,325,097 → 635,097']],
+    summary:'구조 탐색 기반 경량화로 연산량 86%·파라미터 97%를 줄여 추론 지연 90% 단축',
+    headline:{ val:'90% 단축', lbl:'6.33 → 0.64 ms', tone:'p' }
+  },
+  {
+    type:'bench', group:'edge', name:'ResNet50', sub:'Arm Ethos-U65',
+    task:'객체 탐지 (Vision)', inputSize:'—',
+    hw:[{name:'Arm Ethos-U65', exec:'NPU'}],
+    tech:['Nota_Search — 구조 탐색 기반 경량화','NPU 미지원 연산 블록 치환'],
+    beforeLabel:'원본 모델', afterLabel:'노타 경량화 모델',
+    metrics:[ { label:'추론 지연', unit:'ms', before:12.25, after:2.56, lowerBetter:true } ],
+    accuracyNote:'Top-1 정확도 FP32 78.03% → 76.63% (−1.4%p) · INT8 77.81% → 75.9% (−1.91%p)',
+    runtimeRows:[['연산량 (FLOPs)','2596.06M → 224.7M (91% 감소)'],['파라미터','23.7M → 2.2M (91% 감소)'],['NPU 사이클','12,251,182 → 2,560,182']],
+    summary:'구조 탐색 기반 경량화로 연산량 91%·파라미터 91%를 줄여 추론 지연 79% 단축',
+    headline:{ val:'79% 단축', lbl:'12.25 → 2.56 ms', tone:'p' }
+  },
+  {
+    type:'bench', group:'edge', name:'Segformer', sub:'NVIDIA Jetson Nano',
+    task:'시맨틱 분할 (Semantic Segmentation)', inputSize:'—',
+    hw:[{name:'NVIDIA Jetson Nano', exec:'GPU'}],
+    tech:['Weighted-Sum Decoder'],
+    beforeLabel:'원본 모델', afterLabel:'노타 경량화 모델',
+    metrics:[ { label:'추론 속도', unit:'FPS', before:5.12, after:17.23, lowerBetter:false } ],
+    summary:'5.1 FPS로 처리되던 시맨틱 분할 모델을 17.2 FPS로 3.4배 빠르게 처리하도록 최적화',
+    headline:{ val:'3.4× 빠름', lbl:'5.12 → 17.23 FPS', tone:'g' }
+  },
+  {
+    type:'bench', group:'edge', name:'MobileNetV2', sub:'STM32 MCU 탑재',
+    task:'이미지 분류 (Classification)', inputSize:'—',
+    hw:[{name:'STM32H747I-DISCO', exec:'MCU'}],
+    tech:['Pruning (가지치기)'],
+    beforeLabel:'원본 모델', afterLabel:'노타 경량화 모델',
+    metrics:[
+      { label:'Flash 사용량', unit:'KB', before:406.9, after:159.8, lowerBetter:true },
+      { label:'추론 지연', unit:'ms', before:363.8, after:282.8, lowerBetter:true },
+    ],
+    accuracyNote:'정확도 92.78% → 94.01% (+1.23%p 상승) — 경량화 후 오히려 향상',
+    runtimeRows:[['타깃 보드','STMicroelectronics STM32H747I-DISCO (Cortex-M7 MCU)'],],
+    summary:'Flash 406.9KB로 MCU 탑재가 어렵던 모델을 Flash 159.8KB, 추론 지연 282.8ms로 경량화해 MCU 탑재 실현',
+    headline:{ val:'Flash 61% 절감', lbl:'MCU 탑재 실현 (406.9 → 159.8KB)', tone:'p' }
+  },
+  {
+    type:'bench', group:'edge', name:'Conformer', sub:'오디오 · NPU 배포',
+    task:'음성 인식 (Audio)', inputSize:'오디오',
+    hw:[{name:'NXP i.MX 93 (Cortex-M33 + Ethos-U65)', exec:'NPU'}],
+    tech:['미지원 연산자 치환'],
+    beforeLabel:'원본 모델', afterLabel:'노타 경량화 모델',
+    metrics:[ { label:'추론 지연', unit:'ms', before:2.09, after:0.4, lowerBetter:true } ],
+    runtimeRows:[['Alif Ensemble E7 DevKit','3.93 ms → 0.73 ms (5.4배)'],
+      ['Seeed Studio Grove Vision','원본 구동 불가 → 2.0 ms 구동 실현'],],
+    summary:'NPU에 배포할 수 없던 음성 인식 모델을 NPU에서 0.4ms로 5.2배 빠르게 추론하도록 최적화',
+    headline:{ val:'5.2× 빠름', lbl:'NPU 배포 실현 (2.09 → 0.4 ms)', tone:'g' }
+  },
+
+  /* ─────────── 상세 벤치마크 · CV ─────────── */
+  {
+    type:'cv', group:'detail-cv', name:'DeiT', task:'이미지 분류 (Image Classification)', inputSize:'224×224',
+    hw:[{name:'QCS6490', exec:'GPU'},{name:'Snapdragon 8 Gen 3', exec:'NPU'}],
+    accuracy:{ metric:'Top-1 정확도', original:81.8, optimized:79.12 },
+    data:[
+      { device:'QCS6490',    type:'original',      value:2193.6, label:'QCS6490\nGPU' },
+      { device:'QCS6490',    type:'optimized',     value:389.03, label:'QCS6490\nGPU' },
+      { device:'SD 8 Gen 3', type:'original',      value:181.3,  label:'SD 8 Gen 3\nNPU' },
+      { device:'SD 8 Gen 3', type:'optimized_npu', value:43.75,  label:'SD 8 Gen 3\nNPU' },
+    ],
+    headline:{ val:'5.6× / 4.1×', lbl:'QCS6490 GPU / SD 8 Gen 3 NPU', tone:'' }
+  },
+  {
+    type:'cv', group:'detail-cv', name:'SegFormer-b0', task:'의미론적 분할 (Semantic Segmentation)', inputSize:'512×512',
+    hw:[{name:'Snapdragon 8 Gen 3', exec:'NPU'}],
+    accuracy:{ metric:'mIoU', original:36.7, optimized:34.48 },
+    data:[
+      { device:'SD 8 Gen 3', type:'original',      value:165.44, label:'SD 8 Gen 3\nNPU' },
+      { device:'SD 8 Gen 3', type:'optimized_npu', value:80.25,  label:'SD 8 Gen 3\nNPU' },
+    ],
+    headline:{ val:'2.1× 빠름', lbl:'165.44 → 80.25 ms', tone:'p' }
+  },
+  {
+    type:'cv', group:'detail-cv', name:'Yolo-Fastest', task:'차량 감지 (Vehicle Detection)', inputSize:'640×416',
+    hw:[{name:'QCS6490', exec:'GPU'},{name:'QCS6490', exec:'NPU'}],
+    accuracy:null,
+    accuracyMulti:[
+      { label:'최적화 후 (GPU)', value:83.15, type:'gpu' },
+      { label:'최적화 후 (NPU)', value:77.51, type:'npu' },
+    ],
+    data:[
+      { device:'QCS6490', type:'original',      value:null,  label:'QCS6490\nOriginal' },
+      { device:'QCS6490', type:'optimized',     value:22.18, label:'QCS6490\nGPU' },
+      { device:'QCS6490', type:'optimized_npu', value:4.45,  label:'QCS6490\nNPU' },
+    ],
+    headline:{ val:'NPU 4.45 ms', lbl:'그래프 최적화로 NPU 실행 가능', tone:'p' }
+  },
+  {
+    type:'cv', group:'detail-cv', name:'YOLOv8-Detection', task:'차량 감지 (Vehicle Detection)', inputSize:'640×416',
+    hw:[{name:'QCS6490', exec:'GPU'},{name:'QCS6490', exec:'NPU'}],
+    accuracy:null,
+    accuracyMulti:[
+      { label:'최적화 후 (GPU FP32+16)', value:44.5, type:'gpu' },
+      { label:'최적화 후 (NPU INT8)',   value:41.9, type:'npu' },
+    ],
+    data:[
+      { device:'QCS6490', type:'original',      value:null,  label:'QCS6490\nOriginal' },
+      { device:'QCS6490', type:'optimized',     value:32.33, label:'QCS6490\nGPU FP32+16' },
+      { device:'QCS6490', type:'optimized_npu', value:4.21,  label:'QCS6490\nNPU INT8' },
+    ],
+    headline:{ val:'NPU 4.21 ms', lbl:'그래프 최적화로 NPU 실행 가능', tone:'p' }
+  },
+
+  /* ─────────── 상세 벤치마크 · LLM/VLM ─────────── */
+  {
+    type:'llm', group:'detail-llm', name:'Llava-1.5-7B', task:'비전-언어 모델 (VLM)', inputSize:'336×336',
+    hw:[{name:'IQ-9',exec:'NPU'},{name:'Snapdragon XElite',exec:'NPU'},{name:'SD 8 Gen 3',exec:'NPU'}],
+    contextLength:2048,
+    ttft:[
+      { label:'IQ-9',              value:735, color:'blue',   spec:'DRAM 36GB · 50 TOPS', note:'single HTP' },
+      { label:'Snapdragon XElite', value:778, color:'purple', spec:'DRAM 36GB · 45 TOPS' },
+      { label:'SD 8 Gen 3',        value:791, color:'green',  spec:'DRAM 16GB · 50 TOPS', note:'Spec. decoding 적용 시 804 ms' },
+    ],
+    decoding:[
+      { label:'IQ-9',              value:10.98, color:'blue'   },
+      { label:'Snapdragon XElite', value:8.25,  color:'purple' },
+      { label:'SD 8 Gen 3',        value:10.93, color:'green', boost:19.38, boostLabel:'Speculative Decoding ×1.77' },
+    ],
+    headline:{ val:'735 ms', lbl:'TTFT 최저 (IQ-9) · 실시간 대화', tone:'' }
+  },
+  {
+    type:'llm', group:'detail-llm', name:'InternVL-3-8B', task:'비전-언어 모델 (VLM)', inputSize:'448×448',
+    hw:[{name:'IQ-9',exec:'NPU'}],
+    contextLength:2560,
+    ttft:   [ { label:'IQ-9', value:3102, color:'blue', spec:'DRAM 36GB · 50 TOPS', note:'single HTP' } ],
+    decoding:[ { label:'IQ-9', value:12.44, color:'blue' } ],
+    failNote:'동급 Jetson Orin NX(DRAM 16GB)에서는 메모리 한계로 구동되지 않는 8B급 멀티모달 모델을, <b>IQ-9 단일 HTP에서 12.44 tok/s로 실행</b>합니다.',
+    headline:{ val:'12.44 tps', lbl:'IQ-9 단일 HTP · 8B급 멀티모달', tone:'' }
+  },
+  {
+    type:'llm', group:'detail-llm', name:'InternVL-2.5-4B', task:'비전-언어 모델 (VLM)', inputSize:'448×448',
+    hw:[{name:'Jetson Orin NX',exec:'GPU'}],
+    contextLength:2048,
+    ttft:   [ { label:'Jetson Orin NX', value:1933, color:'orange', spec:'DRAM 16GB · 50 TOPS' } ],
+    decoding:[ { label:'Jetson Orin NX', value:6.94, color:'orange' } ],
+    headline:{ val:'1,933 ms', lbl:'TTFT (Jetson Orin NX)', tone:'' }
+  },
+  {
+    type:'llm', group:'detail-llm', name:'Exaone-3.5-2.4B', task:'언어 모델 (LLM)', inputSize:'텍스트',
+    hw:[{name:'IQ-9',exec:'NPU'},{name:'SD 8 Gen 3',exec:'NPU'}],
+    contextLength:4096,
+    ttft:[
+      { label:'IQ-9',        value:141, color:'blue',  spec:'DRAM 36GB · 50 TOPS', note:'single HTP' },
+      { label:'SD 8 Gen 3',  value:115, color:'green', spec:'DRAM 16GB · 50 TOPS' },
+    ],
+    decoding:[
+      { label:'IQ-9',        value:19.78, color:'blue'  },
+      { label:'SD 8 Gen 3',  value:23.98, color:'green' },
+    ],
+    failNote:'LG AI연구원 <b>EXAONE 3.5-2.4B</b>를 Snapdragon X Elite 디바이스에서 구동하고 전시 데모로 시연한 레퍼런스를 보유하고 있습니다.',
+    headline:{ val:'23.98 tps', lbl:'디코딩 최고 (SD 8 Gen 3)', tone:'g' }
+  },
+  {
+    type:'llm', group:'detail-llm', name:'Qwen-2.5-7B', task:'언어 모델 (LLM)', inputSize:'텍스트',
+    hw:[{name:'IQ-9',exec:'NPU'}],
+    contextLength:4096,
+    ttft:   [ { label:'IQ-9', value:311,   color:'blue', spec:'DRAM 36GB · 50 TOPS', note:'single HTP' } ],
+    decoding:[ { label:'IQ-9', value:12.43, color:'blue' } ],
+    headline:{ val:'311 ms', lbl:'TTFT (IQ-9) · 실시간 대화', tone:'' }
+  },
+  {
+    type:'llm', group:'detail-llm', name:'Llama-3-8B', task:'언어 모델 (LLM)', inputSize:'텍스트',
+    hw:[{name:'SD 8 Gen 3',exec:'NPU'},{name:'Snapdragon XElite',exec:'NPU'}],
+    contextLength:8192,
+    ttft:[
+      { label:'SD 8 Gen 3',        value:154, color:'green',  spec:'DRAM 16GB · 50 TOPS' },
+      { label:'Snapdragon XElite', value:325, color:'purple', spec:'DRAM 36GB · 45 TOPS' },
+    ],
+    decoding:[
+      { label:'SD 8 Gen 3',        value:11.24, color:'green'  },
+      { label:'Snapdragon XElite', value:5.34,  color:'purple' },
+    ],
+    headline:{ val:'154 ms', lbl:'TTFT 최저 (SD 8 Gen 3)', tone:'g' }
+  },
+  {
+    type:'llm', group:'detail-llm', name:'Llama-3.2-1B', task:'언어 모델 (LLM)', inputSize:'텍스트',
+    hw:[{name:'QCS6490',exec:'NPU'}],
+    contextLength:2048,
+    ttft:   [ { label:'QCS6490', value:355,  color:'blue', spec:'DRAM 8GB · 12 TOPS' } ],
+    decoding:[ { label:'QCS6490', value:7.92, color:'blue' } ],
+    headline:{ val:'355 ms', lbl:'TTFT (QCS6490)', tone:'' }
+  },
+  {
+    type:'llm', group:'detail-llm', name:'Phi-3-mini-4k', task:'언어 모델 (LLM)', inputSize:'텍스트',
+    hw:[{name:'SD 8 Gen 3',exec:'NPU'}],
+    contextLength:2048,
+    ttft:   [ { label:'SD 8 Gen 3', value:84,   color:'green', spec:'DRAM 16GB · 50 TOPS', note:'Speculative Decoding 적용' } ],
+    decoding:[ { label:'SD 8 Gen 3', value:27.7, color:'green' } ],
+    headline:{ val:'27.7 tps', lbl:'디코딩 최고 · TTFT 84 ms', tone:'g' }
+  },
+];
+
+// ═══════════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════════
+const sidebar = document.getElementById('sidebar');
+let activeBtn = null;
+
+const searchWrap = document.createElement('div');
+searchWrap.className = 'sb-search-wrap';
+searchWrap.innerHTML = `<span class="sb-ico">⌕</span>
+  <input class="sb-search" id="sbSearch" type="search" placeholder="사례·디바이스 검색" autocomplete="off" spellcheck="false">
+  <span class="sb-count" id="sbCount"></span>`;
+sidebar.appendChild(searchWrap);
+
+const ovBtn = document.createElement('button');
+ovBtn.className = 'overview-btn active';
+ovBtn.innerHTML = '<span>◧</span> 전체 사례 요약';
+ovBtn.onclick = () => { setActive(ovBtn); renderOverview(); setHash('overview'); closeSidebar(); };
+sidebar.appendChild(ovBtn);
+
+const cmpBtn = document.createElement('button');
+cmpBtn.className = 'overview-btn';
+cmpBtn.style.marginTop = '2px';
+cmpBtn.innerHTML = '<span>⇄</span> 사례 비교';
+cmpBtn.onclick = () => { setActive(cmpBtn); renderCompare(); setHash('compare'); closeSidebar(); };
+sidebar.appendChild(cmpBtn);
+
+const btnRefs = {};
+GROUPS.forEach(g => {
+  const idxs = models.map((m,i)=>({m,i})).filter(x=>x.m.group===g.key);
+  if (!idxs.length) return;
+  const sec = document.createElement('div');
+  sec.className = 'sidebar-section';
+  const collapsed = COLLAPSED_BY_DEFAULT.includes(g.key);
+  if (collapsed) sec.classList.add('collapsed');
+  sec.dataset.defCollapsed = collapsed ? '1' : '';
+  const lbl = document.createElement('button');
+  lbl.className = 'sidebar-label';
+  lbl.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  lbl.innerHTML = `<span class="sl-txt">${g.short || g.label}</span><span class="cnt">${idxs.length}</span><span class="chev">▾</span>`;
+  lbl.onclick = () => {
+    const now = sec.classList.toggle('collapsed');
+    lbl.setAttribute('aria-expanded', now ? 'false' : 'true');
+  };
+  sec.appendChild(lbl);
+  const list = document.createElement('div');
+  list.className = 'model-list';
+  idxs.forEach(({m,i}) => {
+    const btn = document.createElement('button');
+    btn.className = 'model-btn';
+    btn.innerHTML = `<span class="dot"></span><span class="btn-txt">${m.name}${m.sub?`<span class="btn-sub">${m.sub}</span>`:''}</span>`;
+    btn.onclick = () => { goTo(i); };
+    btn.dataset.key = [m.name, m.sub||'', m.task||'', g.label, (m.hw||[]).map(h=>h.name+' '+h.exec).join(' '), (m.tech||[]).join(' ')].join(' ').toLowerCase();
+    btn.dataset.idx = i;
+    btnRefs[i] = btn;
+    list.appendChild(btn);
+  });
+  sec.appendChild(list);
+  sec.dataset.group = g.key;
+  sidebar.appendChild(sec);
+});
+
+function setActive(btn) {
+  if (activeBtn) activeBtn.classList.remove('active');
+  ovBtn.classList.remove('active');
+  cmpBtn.classList.remove('active');
+  btn.classList.add('active');
+  activeBtn = btn;
+}
+function selectModel(idx) {
+  const m = models[idx];
+  const mc = document.getElementById('mainContent');
+  mc.scrollTop = 0; window.scrollTo(0,0);
+  if (m.customChart === 'kimi') renderKimi(m);
+  else if (m.type === 'llm') renderLLM(m);
+  else if (m.type === 'cv') renderCV(m);
+  else renderBench(m);
+}
+function expandFor(btn) {
+  const sec = btn.closest('.sidebar-section');
+  if (sec && sec.classList.contains('collapsed')) {
+    sec.classList.remove('collapsed');
+    const lb = sec.querySelector('.sidebar-label');
+    if (lb) lb.setAttribute('aria-expanded','true');
+  }
+}
+function goTo(idx) {
+  setActive(btnRefs[idx]); selectModel(idx); expandFor(btnRefs[idx]);
+  btnRefs[idx].scrollIntoView({block:'nearest'});
+  setHash(slugOf(models[idx]));
+  closeSidebar();
+}
+
+// ── 해시 라우팅 (공유 가능한 URL) ──────────────────────
+function slugOf(m) {
+  return (m.name + (m.sub ? '-' + m.sub : '')).toLowerCase()
+    .replace(/[^\w가-힣]+/g,'-').replace(/^-+|-+$/g,'');
+}
+let suppressHash = false;
+function setHash(h) { suppressHash = true; location.hash = '#/' + h; setTimeout(()=>suppressHash=false, 30); }
+function routeFromHash(initial) {
+  const h = decodeURIComponent((location.hash||'').replace(/^#\/?/,''));
+  if (!h || h === 'overview') { setActive(ovBtn); renderOverview(); return; }
+  if (h === 'compare')        { setActive(cmpBtn); renderCompare(); return; }
+  const idx = models.findIndex(m => slugOf(m) === h);
+  if (idx >= 0) { setActive(btnRefs[idx]); selectModel(idx); expandFor(btnRefs[idx]); btnRefs[idx].scrollIntoView({block:'nearest'}); }
+  else if (initial) { setActive(ovBtn); renderOverview(); }
+}
+window.addEventListener('hashchange', () => { if (!suppressHash) routeFromHash(false); });
+
+// ── 사이드바 검색 ─────────────────────────────────────
+const sbSearch = document.getElementById('sbSearch');
+const sbCount  = document.getElementById('sbCount');
+function applyFilter() {
+  const q = sbSearch.value.trim().toLowerCase();
+  let shown = 0;
+  sidebar.querySelectorAll('.sidebar-section').forEach(sec => {
+    let any = false;
+    sec.querySelectorAll('.model-btn').forEach(b => {
+      const hit = !q || b.dataset.key.includes(q);
+      b.style.display = hit ? '' : 'none';
+      if (hit) { any = true; shown++; }
+    });
+    sec.style.display = any ? '' : 'none';
+    const lb = sec.querySelector('.sidebar-label');
+    const cn = sec.querySelector('.cnt');
+    if (cn) { const hits = sec.querySelectorAll('.model-btn:not([style*="none"])').length;
+              cn.textContent = q ? hits : sec.querySelectorAll('.model-btn').length; }
+    if (q) { if (any) sec.classList.remove('collapsed'); }
+    else   { sec.classList.toggle('collapsed', !!sec.dataset.defCollapsed); }
+    if (lb) lb.setAttribute('aria-expanded', sec.classList.contains('collapsed') ? 'false' : 'true');
+  });
+  sbCount.textContent = q ? shown + '건' : '';
+  let nr = document.getElementById('sbNoResult');
+  if (!shown && q) {
+    if (!nr) { nr = document.createElement('div'); nr.id='sbNoResult'; nr.className='sb-noresult'; nr.textContent='검색 결과가 없습니다'; sidebar.appendChild(nr); }
+  } else if (nr) nr.remove();
+  kbIdx = -1; paintKb();
+}
+sbSearch.addEventListener('input', applyFilter);
+
+// ── 키보드 내비게이션 ─────────────────────────────────
+let kbIdx = -1;
+const visibleBtns = () => Array.from(sidebar.querySelectorAll('.model-btn')).filter(b => b.style.display !== 'none' && !b.closest('.sidebar-section').classList.contains('collapsed'));
+function paintKb() {
+  sidebar.querySelectorAll('.model-btn').forEach(b => b.classList.remove('kb'));
+  const v = visibleBtns();
+  if (kbIdx >= 0 && v[kbIdx]) { v[kbIdx].classList.add('kb'); v[kbIdx].scrollIntoView({block:'nearest'}); }
+}
+document.addEventListener('keydown', e => {
+  const typing = document.activeElement === sbSearch;
+  if (e.key === '/' && !typing) { e.preventDefault(); sbSearch.focus(); sbSearch.select(); return; }
+  if (e.key === 'Escape') { if (typing) { sbSearch.value=''; applyFilter(); sbSearch.blur(); } closeSidebar(); return; }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const v = visibleBtns(); if (!v.length) return;
+    e.preventDefault();
+    if (kbIdx < 0) kbIdx = v.findIndex(b => b.classList.contains('active'));
+    kbIdx = Math.min(Math.max(kbIdx + (e.key === 'ArrowDown' ? 1 : -1), 0), v.length - 1);
+    paintKb();
+  }
+  if (e.key === 'Enter') {
+    const v = visibleBtns();
+    if (kbIdx >= 0 && v[kbIdx]) { e.preventDefault(); goTo(+v[kbIdx].dataset.idx); }
+  }
+});
+
+// ── 모바일 사이드바 토글 ──────────────────────────────
+const sbBackdrop = document.getElementById('sbBackdrop');
+function closeSidebar() { sidebar.classList.remove('open'); sbBackdrop.classList.remove('on'); }
+document.getElementById('menuBtn').onclick = () => {
+  const open = !sidebar.classList.contains('open');
+  sidebar.classList.toggle('open', open); sbBackdrop.classList.toggle('on', open);
+};
+sbBackdrop.onclick = closeSidebar;
+
+const hint = document.createElement('div');
+hint.className = 'kbd-hint';
+hint.innerHTML = '<span class="lead">▾ 카테고리를 눌러 목록을 펼치세요</span><kbd>/</kbd> 검색 · <kbd>↑</kbd><kbd>↓</kbd> 이동 · <kbd>Enter</kbd> 열기';
+sidebar.appendChild(hint);
+
+// ═══════════════════════════════════════════════════════════
+// SHARED
+// ═══════════════════════════════════════════════════════════
+function hwIcon(exec) {
+  return exec==='NPU' ? '🔷' : exec==='GPU' ? '🟦' : exec==='DSP' ? '🟩' : exec==='MCU' ? '🟪' : '⬜';
+}
+function hwCls(exec) {
+  return exec==='GPU' ? 'hw-gpu' : exec==='NPU' ? 'hw-npu' : exec==='DSP' ? 'hw-dsp' : exec==='MCU' ? 'hw-mcu' : 'hw-cpu';
+}
+function modelHeaderHTML(model) {
+  const hwChips = (model.hw||[]).map(h =>
+    `<div class="hw-chip"><span class="hw-icon">${hwIcon(h.exec)}</span>${h.name}<span class="hw-type ${hwCls(h.exec)}">${h.exec}</span></div>`
+  ).join('');
+  return `
+  <div class="model-header-card anim-0">
+    <div class="model-title-row">
+      <div class="model-title-left">
+        <h2>${model.name}${model.sub?` <span style="font-size:15px;font-weight:500;color:#7a8296">· ${model.sub}</span>`:''}</h2>
+        <div class="model-task-badge">${model.task}${model.inputSize && model.inputSize!=='—' ? ` · 입력 ${model.inputSize}` : ''}</div>
+      </div>
+    </div>
+    <div class="hw-grid">${hwChips}</div>
+  </div>`;
+}
+function fmt(n) {
+  if (n === null || n === undefined) return '—';
+  if (Number.isInteger(n)) return n.toLocaleString();
+  return n.toLocaleString(undefined,{maximumFractionDigits:3});
+}
+
+// ═══════════════════════════════════════════════════════════
+// BENCH RENDERER (최적화 전 / 후)
+// ═══════════════════════════════════════════════════════════
+function renderBench(model) {
+  const main = document.getElementById('mainContent');
+
+  const techHTML = model.tech && model.tech.length
+    ? `<div class="tech-row anim-1"><span class="tech-row-label">적용 기술</span>${model.tech.map(t=>`<span class="tech-chip">${t}</span>`).join('')}</div>` : '';
+
+  const specHTML = model.spec ? `<div class="spec-box anim-1">${model.spec}</div>` : '';
+
+  const c = model.context;
+  const ucHTML = c ? `
+    <div class="uc-grid anim-1">
+      <div class="uc-col"><div class="uc-h">배경</div><p>${c.background}</p></div>
+      <div class="uc-col"><div class="uc-h ch">과제</div><ul>${c.challenge.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+      <div class="uc-col sol"><div class="uc-h so">NetsPresso 솔루션</div><ul>${c.solution.map(x=>`<li>${x}</li>`).join('')}</ul></div>
+    </div>` : '';
+  const custHTML = model.customer ? `<div class="cust-box anim-0">${model.customer}</div>` : '';
+
+  const cards = model.metrics.map((mt, i) => {
+    const maxV = Math.max(mt.before, mt.after) || 1;
+    const bPct = (mt.before/maxV*100).toFixed(1);
+    const aPct = (mt.after /maxV*100).toFixed(1);
+    let deltaTxt, deltaCls = '';
+    if (mt.unlock) { deltaTxt = `▲ ${fmt(mt.before)} → ${fmt(mt.after)} ${mt.unit}`; }
+    else if (mt.keep) { deltaTxt = mt.keepText || '성능 유지'; deltaCls = 'keep'; }
+    else if (mt.lowerBetter) {
+      const red = ((1 - mt.after/mt.before)*100).toFixed(1).replace(/\.0$/,'');
+      const ratio = (mt.before/mt.after).toFixed(1);
+      deltaTxt = `▼ ${red}% 절감 · ${ratio}× `;
+    } else {
+      const imp = ((mt.after/mt.before - 1)*100).toFixed(1).replace(/\.0$/,'');
+      const ratio = (mt.after/mt.before).toFixed(1);
+      deltaTxt = `▲ ${imp}% 향상 · ${ratio}× `;
+    }
+    return `
+      <div class="bench-card ${mt.keep?'keep':''}">
+        <div class="bench-head">
+          <div><span class="bench-metric-name">${mt.label}</span><span class="bench-metric-unit">단위: ${mt.unit}</span></div>
+          <span class="bench-delta ${mt.keep?'keep':''}">${deltaTxt}</span>
+        </div>
+        <div class="bench-rows">
+          <div class="bench-row before">
+            <div class="bench-row-lbl">${model.beforeLabel||'원본 모델'}</div>
+            <div class="bench-track"><div class="bench-fill orig" id="bf-o-${i}" data-w="${bPct}"></div></div>
+            <div class="bench-row-val">${fmt(mt.before)} <span style="font-size:12px;color:#6b7280">${mt.unit}</span></div>
+          </div>
+          <div class="bench-row after">
+            <div class="bench-row-lbl">${model.afterLabel||'노타 경량화 모델'}</div>
+            <div class="bench-track"><div class="bench-fill opt ${mt.keep?'keep':''}" id="bf-a-${i}" data-w="${aPct}"></div></div>
+            <div class="bench-row-val">${fmt(mt.after)} <span style="font-size:12px;color:#6b7280">${mt.unit}</span></div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const chartHTML = model.customChart === 'kimi' ? kimiChartHTML() : '';
+
+  // 요약 KPI 카드
+  const kpi = model.metrics.map(mt => {
+    if (mt.unlock) return `<div class="speedup-card s-npu">
+      <div class="speedup-device">${mt.label}</div>
+      <div class="speedup-value npu">${fmt(mt.before)} → ${fmt(mt.after)}</div>
+      <div class="speedup-label">${mt.unit} · 기존 실행 불가 구간을 신규 확보</div></div>`;
+    if (mt.keep) return `<div class="speedup-card s-gpu" style="--x:0">
+      <div class="speedup-device">${mt.label}</div>
+      <div class="speedup-value" style="background:linear-gradient(135deg,#34d399,#059669);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">${mt.keepText||'유지'}</div>
+      <div class="speedup-label">${fmt(mt.before)} → ${fmt(mt.after)} ${mt.unit}</div></div>`;
+    const ratio = mt.lowerBetter ? (mt.before/mt.after) : (mt.after/mt.before);
+    const pct = mt.lowerBetter
+      ? `${((1-mt.after/mt.before)*100).toFixed(1).replace(/\.0$/,'')}% 절감`
+      : `${((mt.after/mt.before-1)*100).toFixed(1).replace(/\.0$/,'')}% 향상`;
+    return `<div class="speedup-card ${mt.lowerBetter?'s-gpu':'s-npu'}">
+      <div class="speedup-device">${mt.label}</div>
+      <div class="speedup-value${mt.lowerBetter?'':' npu'}">${ratio.toFixed(1)}×</div>
+      <div class="speedup-label">${pct} · ${fmt(mt.before)} → ${fmt(mt.after)} ${mt.unit}</div></div>`;
+  }).join('');
+
+  // 지연/FPS 지표가 있으면 실시간 처리 구간 스트립
+  const lat = model.metrics.find(x => x.unit === 'ms' || x.unit === 'FPS');
+  const rtHTML = lat
+    ? realtimeStripHTML(
+        lat.unit === 'FPS' ? 1000/lat.before : lat.before,
+        lat.unit === 'FPS' ? 1000/lat.after  : lat.after,
+        lat.unit === 'FPS' ? '(FPS → ms 환산)' : '')
+    : '';
+  const peerHTML = peerRankHTML(model);
+
+  const rr = model.runtimeRows || [];
+  const condRows = [
+    ['정확도 영향', model.accuracyNote || null],
+    ['최적화 전 실행 조건', model.beforeLabel || '원본 모델'],
+    ['최적화 후 실행 조건', model.afterLabel || '노타 경량화 모델'],
+    ['적용 기법', (model.tech||[]).join(', ') || null],
+    ...rr,
+  ].filter(([,v]) => v);
+  const condHTML = condRows.length ? `
+    <div class="cond-card anim-3">
+      <div class="metrics-title">측정 · 검증 조건</div>
+      ${condRows.map(([k,v]) => `<div class="cond-row"><span class="cond-k">${k}</span>
+        <span class="cond-v">${v}</span></div>`).join('')}
+    </div>` : '';
+
+  main.innerHTML = `
+    ${modelHeaderHTML(model)}
+    ${custHTML}
+    ${specHTML}
+    ${ucHTML}
+    ${techHTML}
+    ${chartHTML}
+    <div class="speedup-section anim-2">${kpi}</div>
+    <div class="bench-grid anim-2">${cards}</div>
+    ${rtHTML}
+    ${condHTML}
+    ${peerHTML}
+    ${model.summary ? `<div class="bench-summary anim-3">${model.summary}</div>` : ''}
+    ${model.footnote ? `<div class="bench-footnote anim-3">※ ${model.footnote}</div>` : ''}`;
+
+  requestAnimationFrame(()=>setTimeout(()=>{
+    model.metrics.forEach((_,i)=>{
+      const o=document.getElementById(`bf-o-${i}`), a=document.getElementById(`bf-a-${i}`);
+      if(o) o.style.width=o.dataset.w+'%';
+      if(a) a.style.width=a.dataset.w+'%';
+    });
+    document.querySelectorAll('.peer-fill').forEach(el => { el.style.width = el.dataset.w+'%'; });
+  },80));
+}
+
+// ═══════════════════════════════════════════════════════════
+// KIMI K3 — 전용 드라마틱 렌더러
+// ═══════════════════════════════════════════════════════════
+function countUp(el, to, dur, dec, delay) {
+  if (!el) return;
+  const t0 = performance.now() + (delay||0);
+  const step = (now) => {
+    const p = Math.min(Math.max((now - t0) / dur, 0), 1);
+    const e = 1 - Math.pow(1 - p, 3);
+    el.textContent = (to * e).toFixed(dec);
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function renderKimi(model) {
+  const main = document.getElementById('mainContent');
+  main.scrollTop = 0;
+
+  // head-to-head @ 2.1T (25% 경량화)
+  const LO = 76, HI = 85;
+  const pct = v => ((v - LO) / (HI - LO) * 100).toFixed(2);
+  const basePct = pct(83.5);
+  const rows = [
+    { n:'REAP', s:'기존 기법 · 균일 제거', v:82.2, cls:'reap', tag:'tag-lose', tagT:'원본 미달 −1.3', win:false },
+    { n:'Kimi K3 원본', s:'2.8T 전체 파라미터', v:83.5, cls:'orig', tag:'tag-base', tagT:'기준선', win:false },
+    { n:'노타 비균일 전문가 프루닝', s:'2.1T · 25% 경량화', v:84.0, cls:'nota', tag:'tag-win', tagT:'✦ 원본 초과 +0.5', win:true },
+  ].map((r,i) => `
+    <div class="h2h-row ${r.win?'win':''}">
+      <div class="h2h-name"><b>${r.n}</b>${r.s}</div>
+      <div class="h2h-track">
+        <div class="h2h-fill ${r.cls}" id="h2h-${i}" data-w="${pct(r.v)}"></div>
+        <div class="h2h-base" style="left:${basePct}%">${i===0?`<div class="h2h-base-tip">원본 83.5</div>`:''}</div>
+      </div>
+      <div class="h2h-val">${r.v.toFixed(1)}<span class="h2h-tag ${r.tag}" style="margin:0 0 0 2px">${r.tagT}</span></div>
+    </div>`).join('');
+
+  // GPU rack
+  const stack = (isAfter) => Array.from({length:8},(_,i)=>
+    `<div class="gpu-slot"><div class="gpu-unit" ${isAfter?`id="gu-${i}"`:''}><span class="gu-on"></span></div></div>`).join('');
+
+  main.innerHTML = `
+    ${modelHeaderHTML(model)}
+
+    <div class="kimi-hero anim-0">
+      <div class="kh-eyebrow">World's first 3T-class open-weight MoE</div>
+      <div class="kh-line">
+        <span class="kh-strike"><span class="kh-num" id="kh-a">0.0</span><span class="kh-unit">T</span></span>
+        <span class="kh-arrow">→</span>
+        <span class="kh-num accent" id="kh-b">0.0</span><span class="kh-unit accent">T</span>
+      </div>
+      <div class="kh-sub">파라미터 <span class="hl">0.7T를 덜어내고도</span>, 벤치마크 점수는 <b>원본을 넘어섰습니다.</b></div>
+      <div class="kh-pills">
+        <div class="kh-pill"><div class="kh-pill-v cy">84.0 <span style="font-size:14px;color:#5f6674">vs 83.5</span></div><div class="kh-pill-l">벤치마크 평균 점수 — 원본 대비</div></div>
+        <div class="kh-pill"><div class="kh-pill-v gr">+1.8점</div><div class="kh-pill-l">동일 크기 REAP 대비 우위</div></div>
+        <div class="kh-pill"><div class="kh-pill-v go">8 → 4장</div><div class="kh-pill-l">B300 GPU (50% 경량화 시)</div></div>
+      </div>
+    </div>
+
+    <div class="spec-box anim-1">${model.spec}</div>
+    <div class="tech-row anim-1"><span class="tech-row-label">적용 기술</span>${model.tech.map(t=>`<span class="tech-chip">${t}</span>`).join('')}</div>
+
+    ${kimiChartHTML()}
+
+    <div class="h2h anim-3">
+      <div class="metrics-title" style="margin-bottom:18px">동일 조건 비교 — 2.1T (25% 경량화) 시점</div>
+      ${rows}
+      <div class="kimi-quote" style="margin-top:6px">같은 크기로 줄였을 때 <b>REAP은 원본에 못 미치지만</b>, 노타의 비균일 전문가 프루닝은 <b>원본을 넘어섭니다.</b></div>
+    </div>
+
+    <div class="gpu-panel anim-3">
+      <div class="metrics-title">GPU 사용량 — NVIDIA B300 (50% 경량화 시)</div>
+      <div class="gpu-compare">
+        <div class="gpu-col">
+          <div class="gpu-stack">${stack(false)}</div>
+          <div class="gpu-col-lbl"><b>8장</b>원본 모델</div>
+        </div>
+        <div class="gpu-arrow-mid"><div class="ga">→</div><div class="gl">50% 절감</div></div>
+        <div class="gpu-col">
+          <div class="gpu-stack">${stack(true)}</div>
+          <div class="gpu-col-lbl after"><b>4장</b>노타 비균일 전문가 프루닝</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bench-summary anim-3">${model.summary}</div>
+    <div class="bench-footnote anim-3" style="padding-bottom:14px">※ ${model.footnote}</div>`;
+
+  // ── 애니메이션 ──
+  countUp(document.getElementById('kh-a'), 2.8, 900, 1, 120);
+  countUp(document.getElementById('kh-b'), 2.1, 1000, 1, 620);
+  animateKimiChart();
+  setTimeout(()=>{ [0,1,2].forEach(i=>{ const el=document.getElementById(`h2h-${i}`); if(el) el.style.width=el.dataset.w+'%'; }); }, 320);
+  for (let i=0;i<8;i++) setTimeout(()=>{
+    const el = document.getElementById(`gu-${i}`);
+    if (el) el.classList.add(i < 4 ? 'on' : 'off');
+  }, 500 + (i<4 ? i*90 : (7-i)*120 + 260));
+}
+
+function animateKimiChart() {
+  setTimeout(()=>{
+    ['kimi-reap','kimi-nota'].forEach((id,k)=>{
+      const p = document.getElementById(id);
+      if (!p) return;
+      const L = p.getTotalLength();
+      p.style.strokeDasharray = L; p.style.strokeDashoffset = L;
+      p.style.transition = `stroke-dashoffset 1.15s cubic-bezier(0.33,1,0.68,1) ${k*0.18+0.15}s`;
+      requestAnimationFrame(()=>{ p.style.strokeDashoffset = 0; });
+    });
+    ['kimi-adv','kimi-dots','kimi-anno','kimi-dim'].forEach((id,k)=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.transition = `opacity 0.6s ease ${1.15 + k*0.16}s`;
+      requestAnimationFrame(()=>{ el.style.opacity = 1; });
+    });
+    const pulse = document.getElementById('kimi-pulse');
+    if (pulse) { pulse.style.transition='opacity .5s ease 1.55s'; requestAnimationFrame(()=>pulse.style.opacity=1); }
+  }, 60);
+}
+
+// Kimi K3 — 파라미터 수 대비 벤치마크 점수
+function kimiChartHTML() {
+  const X0=62, X1=744, Y0=22, Y1=292;
+  const xF = p => X0 + (p-1.4)/1.4*(X1-X0);
+  const yF = v => Y1 - (v-76)/10*(Y1-Y0);
+  const nota = [[1.4,78.0],[2.1,84.0]];
+  const reap = [[1.4,77.0],[2.1,82.2]];
+  const line = pts => pts.map(([p,v],i)=>`${i?'L':'M'}${xF(p).toFixed(1)},${yF(v).toFixed(1)}`).join(' ');
+  // 노타 라인이 원본(83.5)을 넘어서는 지점
+  const cross = 1.4 + (83.5-78.0)/((84.0-78.0)/0.7);
+  const grid = [76,78,80,82,84,86].map(v=>
+    `<line x1="${X0}" y1="${yF(v).toFixed(1)}" x2="${X1}" y2="${yF(v).toFixed(1)}" stroke="rgba(255,255,255,0.045)"/>
+     <text x="${X0-12}" y="${(yF(v)+4).toFixed(1)}" fill="#5a6070" font-size="12" font-family="Space Mono, ui-monospace, monospace" text-anchor="end">${v}</text>`).join('');
+  const xt = [[1.4,'1.4T','50% 경량화'],[2.1,'2.1T','25% 경량화'],[2.8,'2.8T','원본']].map(([p,a,b])=>
+    `<text x="${xF(p).toFixed(1)}" y="316" fill="#c8cad0" font-size="14" font-family="Space Mono, ui-monospace, monospace" font-weight="700" text-anchor="middle">${a}</text>
+     <text x="${xF(p).toFixed(1)}" y="332" fill="#5a6070" font-size="11.5" text-anchor="middle">${b}</text>`).join('');
+  const advArea = `M${xF(1.4).toFixed(1)},${yF(78).toFixed(1)} L${xF(2.1).toFixed(1)},${yF(84).toFixed(1)} L${xF(2.1).toFixed(1)},${yF(82.2).toFixed(1)} L${xF(1.4).toFixed(1)},${yF(77).toFixed(1)} Z`;
+
+  return `
+  <div class="svg-chart-card anim-2">
+    <div class="llm-chart-title">파라미터 수 대비 벤치마크 평균 점수</div>
+    <div class="llm-chart-subtitle" style="margin-bottom:12px">경량화 비율에 따른 성능 — 높을수록 우수 ↑</div>
+    <div class="svg-legend">
+      <div class="svg-legend-item"><span class="svg-legend-line" style="background:#1ED2EB;box-shadow:0 0 8px rgba(30,210,235,0.6)"></span>노타 비균일 전문가 프루닝</div>
+      <div class="svg-legend-item"><span class="svg-legend-line" style="background:#6b7280"></span>REAP (기존 기법)</div>
+      <div class="svg-legend-item"><span class="svg-legend-line" style="background:#f0b429"></span>Kimi K3 원본 (2.8T)</div>
+    </div>
+    <svg viewBox="0 0 780 344" style="width:100%;height:auto">
+      <defs>
+        <filter id="kglow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <linearGradient id="kadv" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#1ED2EB" stop-opacity="0.04"/><stop offset="100%" stop-color="#1ED2EB" stop-opacity="0.22"/>
+        </linearGradient>
+        <linearGradient id="knota" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#0e7f92"/><stop offset="60%" stop-color="#1ED2EB"/><stop offset="100%" stop-color="#7ff0ff"/>
+        </linearGradient>
+      </defs>
+
+      ${grid}
+      <line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y1}" stroke="#1e2330"/>
+      <line x1="${X0}" y1="${Y1}" x2="${X1}" y2="${Y1}" stroke="#1e2330"/>
+
+      <!-- 원본 기준선 -->
+      <line x1="${X0}" y1="${yF(83.5).toFixed(1)}" x2="${X1}" y2="${yF(83.5).toFixed(1)}" stroke="#f0b429" stroke-width="2.5" opacity="0.9"/>
+      <circle cx="${xF(2.8).toFixed(1)}" cy="${yF(83.5).toFixed(1)}" r="6" fill="#f0b429" stroke="#0a0c10" stroke-width="2"/>
+      <text x="${X1}" y="${(yF(83.5)-14).toFixed(1)}" fill="#f0b429" font-size="13" font-weight="700" text-anchor="end">Kimi K3 원본 83.5</text>
+
+      <!-- 우위 면적 -->
+      <path id="kimi-adv" d="${advArea}" fill="url(#kadv)" opacity="0"/>
+
+      <!-- REAP -->
+      <path id="kimi-reap" d="${line(reap)}" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-dasharray="0" stroke-linecap="round"/>
+      <!-- 노타 -->
+      <path id="kimi-nota" d="${line(nota)}" fill="none" stroke="url(#knota)" stroke-width="4" stroke-linecap="round" filter="url(#kglow)"/>
+
+      <!-- 돌파 지점 -->
+      <g id="kimi-pulse" opacity="0">
+        <circle cx="${xF(cross).toFixed(1)}" cy="${yF(83.5).toFixed(1)}" r="11" fill="none" stroke="#1ED2EB" stroke-width="1.5" opacity="0.5">
+          <animate attributeName="r" values="8;19;8" dur="2.1s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.6;0;0.6" dur="2.1s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="${xF(cross).toFixed(1)}" cy="${yF(83.5).toFixed(1)}" r="5" fill="#1ED2EB"/>
+        <text x="${(xF(cross)+16).toFixed(1)}" y="${(yF(83.5)+34).toFixed(1)}" fill="#1ED2EB" font-size="12.5" font-weight="700" text-anchor="start">◤ 원본 성능 돌파 지점</text>
+      </g>
+
+      <g id="kimi-dots" opacity="0">
+        ${reap.map(([p,v])=>`<circle cx="${xF(p).toFixed(1)}" cy="${yF(v).toFixed(1)}" r="5" fill="#6b7280" stroke="#0a0c10" stroke-width="2"/>`).join('')}
+        ${nota.map(([p,v])=>`<circle cx="${xF(p).toFixed(1)}" cy="${yF(v).toFixed(1)}" r="6" fill="#1ED2EB" stroke="#0a0c10" stroke-width="2"/>`).join('')}
+      </g>
+
+      <g id="kimi-anno" opacity="0">
+        <text x="${(xF(2.1)-14).toFixed(1)}" y="${(yF(84)-14).toFixed(1)}" fill="#1ED2EB" font-size="19" font-weight="700" text-anchor="end" font-family="Space Mono, ui-monospace, monospace">84.0</text>
+        <text x="${(xF(2.1)+14).toFixed(1)}" y="${(yF(82.2)+20).toFixed(1)}" fill="#8a90a0" font-size="15" text-anchor="start" font-family="Space Mono, ui-monospace, monospace">82.2</text>
+        <text x="${(xF(1.4)+10).toFixed(1)}" y="${(yF(78)-21).toFixed(1)}" fill="#8a90a0" font-size="13" text-anchor="start" font-family="Space Mono, ui-monospace, monospace">78.0</text>
+        <text x="${(xF(1.4)+10).toFixed(1)}" y="${(yF(77)+21).toFixed(1)}" fill="#5f6674" font-size="13" text-anchor="start" font-family="Space Mono, ui-monospace, monospace">77.0</text>
+        <text x="${xF(1.84).toFixed(1)}" y="${(yF(81.05)+4).toFixed(1)}" fill="#1ED2EB" font-size="12.5" font-weight="700" text-anchor="middle" opacity="0.9">REAP 대비 우위</text>
+      </g>
+
+      <!-- 0.7T 절감 치수선 -->
+      <g id="kimi-dim" opacity="0">
+        <line x1="${xF(2.1).toFixed(1)}" y1="${Y0+18}" x2="${xF(2.8).toFixed(1)}" y2="${Y0+18}" stroke="#1ED2EB" stroke-width="1.5" opacity="0.65"/>
+        <line x1="${xF(2.1).toFixed(1)}" y1="${Y0+12}" x2="${xF(2.1).toFixed(1)}" y2="${Y0+24}" stroke="#1ED2EB" stroke-width="1.5" opacity="0.65"/>
+        <line x1="${xF(2.8).toFixed(1)}" y1="${Y0+12}" x2="${xF(2.8).toFixed(1)}" y2="${Y0+24}" stroke="#1ED2EB" stroke-width="1.5" opacity="0.65"/>
+        <rect x="${(xF(2.45)-92).toFixed(1)}" y="${Y0+5}" width="184" height="26" rx="13" fill="#0d1017" stroke="rgba(30,210,235,0.35)"/>
+        <text x="${xF(2.45).toFixed(1)}" y="${Y0+22}" fill="#1ED2EB" font-size="13" font-weight="700" text-anchor="middle">0.7T 더 적은 파라미터</text>
+      </g>
+
+      ${xt}
+      <text x="18" y="160" fill="#5a6070" font-size="12" transform="rotate(-90 18 160)" text-anchor="middle">벤치마크 평균 점수</text>
+    </svg>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CV RENDERER (기존)
+// ═══════════════════════════════════════════════════════════
+function beforeAfterBannerHTML(model) {
+  const sMap = {};
+  model.data.forEach(d => { if (!sMap[d.device]) sMap[d.device] = {}; sMap[d.device][d.type] = d.value; });
+  let cards = '';
+  Object.entries(sMap).forEach(([dev, t]) => {
+    const origVal = t.original, gpuVal = t.optimized, npuVal = t.optimized_npu;
+    if (origVal !== undefined && origVal !== null) {
+      cards += `<div class="ba-card before-card">
+        <div class="ba-label orig-lbl">최적화 전</div>
+        <div class="ba-hw">${dev}</div>
+        <div class="ba-time">${origVal} ms</div>
+      </div>`;
+    } else if (origVal === null) {
+      cards += `<div class="ba-card before-card">
+        <div class="ba-label orig-lbl">최적화 전</div>
+        <div class="ba-hw">${dev}</div>
+        <div class="ba-time na">NPU 실행 불가</div>
+      </div>`;
+    }
+    if (gpuVal !== undefined && gpuVal !== null) {
+      const ratio = origVal ? (origVal/gpuVal).toFixed(1) : null;
+      cards += `<div class="ba-speedup-arrow">→</div>
+      <div class="ba-card after-card-gpu">
+        <div class="ba-label gpu-lbl">최적화 후 (GPU)</div>
+        <div class="ba-hw">${dev}</div>
+        <div class="ba-time">${gpuVal} ms</div>
+        ${ratio?`<div class="ba-speedup-pill pill-gpu">⚡ ${ratio}× 빠름</div>`:''}
+      </div>`;
+    }
+    if (npuVal !== undefined && npuVal !== null) {
+      const ratioNpu = origVal ? (origVal/npuVal).toFixed(1) : null;
+      cards += `<div class="ba-speedup-arrow">→</div>
+      <div class="ba-card after-card-npu">
+        <div class="ba-label npu-lbl">최적화 후 (NPU)</div>
+        <div class="ba-hw">${dev}</div>
+        <div class="ba-time">${npuVal} ms</div>
+        ${ratioNpu?`<div class="ba-speedup-pill pill-npu">⚡ ${ratioNpu}× 빠름</div>`:
+          `<div class="ba-speedup-pill pill-npu">NPU 실행 가능</div>`}
+      </div>`;
+    }
+  });
+  return `<div class="before-after-banner anim-1">
+    <div class="ba-header">
+      <span>추론 시간 비교 — 최적화 전 vs 후</span>
+      <span>단위: ms (낮을수록 우수)</span>
+    </div>
+    <div class="ba-cards">${cards}</div>
+  </div>`;
+}
+
+function renderCV(model) {
+  const main = document.getElementById('mainContent');
+  if (!model.data || model.data.length === 0) { main.innerHTML = emptyPage(model); return; }
+
+  const validVals = model.data.filter(d=>d.value!==null).map(d=>d.value);
+  const yMax = Math.ceil(Math.max(...validVals)*1.2/50)*50||100;
+  const ySteps = 5;
+  const yLabels = Array.from({length:ySteps+1},(_,i)=>Math.round(yMax*(ySteps-i)/ySteps));
+
+  const sMap = {};
+  model.data.forEach(d=>{ if(!sMap[d.device]) sMap[d.device]={}; sMap[d.device][d.type]=d.value; });
+  let speedupHTML = '';
+  Object.entries(sMap).forEach(([dev,t]) => {
+    if (t.original && t.optimized)     speedupHTML += speedCard(dev + ' — GPU', (t.original/t.optimized).toFixed(1), false);
+    if (t.original && t.optimized_npu) speedupHTML += speedCard(dev + ' — NPU', (t.original/t.optimized_npu).toFixed(1), true);
+    if (t.original===null && t.optimized!==null && t.optimized_npu!==null)
+      speedupHTML += `<div class="speedup-card s-npu">
+        <div class="speedup-device">최적화로 잠금 해제</div>
+        <div class="speedup-enabled">원래 NPU 실행 불가<br>그래프 최적화 후 NPU 실행 가능해짐</div>
+      </div>`;
+  });
+
+  const barsHTML = model.data.map((d,i) => {
+    const h = d.value!==null ? (d.value/yMax*100).toFixed(1) : 8;
+    const isNA = d.value===null;
+    const badge = d.type==='original'
+      ? `<span style="color:#9B9DA4;font-weight:600">원본</span>`
+      : d.type==='optimized'
+      ? `<span style="color:#1ED2EB;font-weight:600">GPU</span>`
+      : `<span style="color:#a78bfa;font-weight:600">NPU</span>`;
+    const lines = d.label.split('\n');
+    const xLabel = `<div class="x-label"><span>${lines[0]}</span><br><span style="font-size:11px;color:#8a90a0">${lines[1]||''}</span><br>${badge}</div>`;
+    const tooltipTxt = isNA ? '지원 불가' : `${d.type==='original'?'원본':'최적화'}: ${d.value} ms`;
+    return { barHTML:`
+      <div class="bar-group"><div class="bar-wrapper">
+        <div class="bar-value" id="bv${i}">${isNA?'N/A':d.value+' ms'}</div>
+        <div class="bar ${d.type}${isNA?' na':''}" id="bar${i}" style="height:0" data-target="${h}">
+          <div class="bar-tooltip">${tooltipTxt}</div>
+        </div>
+      </div></div>`, xLabel };
+  });
+
+  const hasOrig = model.data.some(d=>d.type==='original');
+  const hasGPU  = model.data.some(d=>d.type==='optimized');
+  const hasNPU  = model.data.some(d=>d.type==='optimized_npu');
+  const legend  = (hasOrig?`<div class="legend-item"><div class="legend-dot" style="background:#9B9DA4"></div>원본</div>`:'')
+                + (hasGPU ?`<div class="legend-item"><div class="legend-dot" style="background:#1ED2EB"></div>최적화 (GPU)</div>`:'')
+                + (hasNPU ?`<div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>최적화 (NPU)</div>`:'');
+
+  let accHTML = '';
+  if (model.accuracy) {
+    const diff = (model.accuracy.original - model.accuracy.optimized).toFixed(2);
+    accHTML = `<div class="metrics-section anim-3">
+      <div class="metrics-title">정확도 — ${model.accuracy.metric}</div>
+      <div class="metrics-row">
+        <div class="metric-card orig-card"><div class="metric-type">최적화 전 (원본)</div><div class="metric-value">${model.accuracy.original}%</div><div class="metric-label">${model.accuracy.metric}</div></div>
+        <div class="metrics-divider"></div>
+        <div class="metric-card opt-card"><div class="metric-type">최적화 후</div><div class="metric-value">${model.accuracy.optimized}%</div><div class="metric-label">${model.accuracy.metric}</div><div class="metric-diff">-${diff}%</div></div>
+      </div></div>`;
+  } else if (model.accuracyMulti) {
+    const cards = model.accuracyMulti.map((a,i) => {
+      const cls = a.type==='npu'?'opt-npu-card':'opt-card';
+      return `${i>0?'<div class="metrics-divider"></div>':''}<div class="metric-card ${cls}"><div class="metric-type">${a.label}</div><div class="metric-value">${a.value}%</div><div class="metric-label">mAP50</div></div>`;
+    }).join('');
+    accHTML = `<div class="metrics-section anim-3"><div class="metrics-title">정확도 — mAP50</div><div class="metrics-row">${cards}</div></div>`;
+  }
+
+  main.innerHTML = `
+    ${modelHeaderHTML(model)}
+    ${beforeAfterBannerHTML(model)}
+    <div class="chart-section anim-2">
+      <div class="chart-header">
+        <div class="chart-title">추론 시간 상세 (ms)</div>
+        <div class="legend">${legend}</div>
+      </div>
+      <div class="chart-wrapper">
+        <div class="y-axis">${yLabels.map(v=>`<div class="y-label">${v>=1000?(v/1000).toFixed(1)+'k':v}</div>`).join('')}</div>
+        <div class="chart-area">
+          <div class="grid-and-bars">
+            ${yLabels.map((_,i)=>`<div class="grid-line" style="top:${(i/ySteps*100).toFixed(1)}%"></div>`).join('')}
+            <div class="bars-container">${barsHTML.map(b=>b.barHTML).join('')}</div>
+          </div>
+          <div class="x-axis">${barsHTML.map(b=>b.xLabel).join('')}</div>
+        </div>
+      </div>
+    </div>
+    <div class="speedup-section anim-3">${speedupHTML}</div>
+    ${accHTML}`;
+
+  requestAnimationFrame(()=>setTimeout(()=>{
+    model.data.forEach((_,i)=>{
+      const bar=document.getElementById(`bar${i}`), bv=document.getElementById(`bv${i}`);
+      if(bar) bar.style.height=bar.dataset.target+'%';
+      if(bv)  bv.style.opacity='1';
+    });
+  },80));
+}
+
+// ═══════════════════════════════════════════════════════════
+// LLM RENDERER (기존)
+// ═══════════════════════════════════════════════════════════
+const TTFT_REALTIME = 1000;
+const DEC_FLUENT    = 10;
+const CARD_COLORS = ['dc-blue','dc-purple','dc-green','dc-orange','dc-blue','dc-purple'];
+
+function realtimeBadge(ttftVal, decVal) {
+  if (ttftVal <= TTFT_REALTIME && decVal >= DEC_FLUENT) return `<div class="dc-realtime-badge badge-realtime">● 실시간 대화 가능</div>`;
+  if (ttftVal <= 2000 && decVal >= 6) return `<div class="dc-realtime-badge badge-neartime">● 준실시간 (체감 양호)</div>`;
+  return `<div class="dc-realtime-badge badge-offline">● 오프라인 처리 수준</div>`;
+}
+
+function renderLLM(model) {
+  const main = document.getElementById('mainContent');
+  if (!model.ttft || model.ttft.length===0) { main.innerHTML = emptyPage(model); return; }
+
+  const deviceCards = model.ttft.map((t, i) => {
+    const dec = model.decoding[i];
+    const colorCls = CARD_COLORS[i % CARD_COLORS.length];
+    const badge = realtimeBadge(t.value, dec.value);
+    const c = BAR_COLORS[t.color]||BAR_COLORS.blue;
+    return `
+      <div class="device-card ${colorCls}">
+        <div><div class="dc-hw-name">${t.label}</div>${t.spec?`<div class="dc-spec">${t.spec}</div>`:''}${badge}</div>
+        ${t.note?`<div class="dc-note">${t.note}</div>`:''}
+        ${dec.boost?`<div class="dc-boost">${dec.boostLabel} 적용 시 <b>${dec.boost} tps</b></div>`:''}
+        <div class="dc-metrics">
+          <div class="dc-metric-row">
+            <div class="dc-metric-header"><span class="dc-metric-label">TTFT (첫 토큰)</span><span class="dc-metric-val">${t.value===null?'N/A':t.value+' ms'}</span></div>
+            <div class="dc-track">
+              <div class="dc-fill" id="dcttft-${i}" style="background:${c.fill};width:0"></div>
+              <div class="dc-baseline-line" style="left:60%;background:#f59e0b;opacity:0.7"></div>
+              <div class="dc-baseline-label" style="left:60%;color:#f59e0b">1,000ms</div>
+            </div>
+          </div>
+          <div class="dc-metric-row">
+            <div class="dc-metric-header"><span class="dc-metric-label">디코딩 속도</span><span class="dc-metric-val">${dec.value} tps</span></div>
+            <div class="dc-track">
+              <div class="dc-fill" id="dcdec-${i}" style="background:${c.fill};width:0"></div>
+              <div class="dc-baseline-line" style="left:60%;background:#10b981;opacity:0.7"></div>
+              <div class="dc-baseline-label" style="left:60%;color:#10b981">10 tps</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const ttftVals = model.ttft.filter(d=>d.value!==null);
+  const maxTTFT     = Math.max(...ttftVals.map(d=>d.value), TTFT_REALTIME) * 1.25;
+  const maxDecoding = Math.max(...model.decoding.map(d=>d.value), DEC_FLUENT) * 1.25;
+  const ttftBasePct = (TTFT_REALTIME / maxTTFT * 100).toFixed(1);
+  const decBasePct  = (DEC_FLUENT   / maxDecoding * 100).toFixed(1);
+
+  main.innerHTML = `
+    ${modelHeaderHTML(model)}
+    <div class="llm-info-row anim-1">
+      ${model.contextLength?`<div class="llm-info-chip">컨텍스트 길이 <strong>${model.contextLength.toLocaleString()} 토큰</strong></div>`:''}
+      <div class="llm-info-chip">입력 크기 <strong>${model.inputSize}</strong></div>
+      <div class="llm-info-chip">측정 대상 <strong>NetsPresso 최적화 모델</strong></div>
+    </div>
+
+    <div class="llm-framing-box anim-1">
+      이 데이터는 <strong>NetsPresso로 최적화된 모델</strong>을 각 엣지 디바이스에서 실행한 결과입니다.
+      최적화 전 원본 모델은 대부분의 엣지 디바이스에서 <strong>실행 자체가 불가능하거나 수십 배 느립니다.</strong>
+      각 수치는 "최적화 후 엣지에서 이 속도가 나온다"는 의미입니다.
+    </div>
+
+    <div class="device-cards-grid anim-2">${deviceCards}</div>
+    ${model.failNote?`<div class="fail-note anim-2">${model.failNote}</div>`:''}
+
+    <div class="llm-chart-card anim-3">
+      <div class="llm-chart-title">TTFT — 첫 토큰 생성 시간</div>
+      <div class="llm-chart-subtitle">밀리초 (ms) · 낮을수록 우수 ↓</div>
+      <div class="llm-baseline-note"><span class="baseline-dot-ttft"></span>기준선: 실시간 응답 (1,000 ms)</div>
+      <div class="llm-bar-list">${llmBarListWithBaseline(ttftVals, maxTTFT, ttftBasePct, 'ttft', 'ms', false)}</div>
+    </div>
+
+    <div class="llm-chart-card anim-3">
+      <div class="llm-chart-title">디코딩 속도</div>
+      <div class="llm-chart-subtitle">초당 토큰 수 (tps) · 높을수록 우수 ↑</div>
+      <div class="llm-baseline-note"><span class="baseline-dot-dec"></span>기준선: 유창한 대화 (10 tps)</div>
+      <div class="llm-bar-list">${llmBarListWithBaseline(model.decoding, maxDecoding, decBasePct, 'dec', 'tps', true)}</div>
+    </div>`;
+
+  requestAnimationFrame(()=>setTimeout(()=>{
+    model.ttft.forEach((d,i)=>{
+      const elT = document.getElementById(`dcttft-${i}`), elD = document.getElementById(`dcdec-${i}`);
+      if(elT) elT.style.width = d.value===null ? '0%' : Math.min((d.value / TTFT_REALTIME)*60, 95).toFixed(1)+'%';
+      if(elD) elD.style.width = Math.min((model.decoding[i].value / DEC_FLUENT)*60, 95).toFixed(1)+'%';
+    });
+    ttftVals.forEach((d,i)=>{ const el=document.getElementById(`ttft-fill-${i}`); if(el) el.style.width=(d.value/maxTTFT*100).toFixed(1)+'%'; });
+    model.decoding.forEach((d,i)=>{ const el=document.getElementById(`dec-fill-${i}`); if(el) el.style.width=(d.value/maxDecoding*100).toFixed(1)+'%'; });
+  },80));
+}
+
+function llmBarListWithBaseline(items, maxVal, basePct, prefix, unit, higherBetter) {
+  return items.map((d,i)=>{
+    const c = BAR_COLORS[d.color]||BAR_COLORS.blue;
+    const baselineColor = higherBetter ? '#10b981' : '#f59e0b';
+    const passFail = higherBetter ? (d.value >= DEC_FLUENT) : (d.value <= TTFT_REALTIME);
+    const badge = passFail
+      ? `<span style="font-size:11px;padding:2px 7px;border-radius:10px;background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.3);font-family:var(--mono);">✓ 기준 충족</span>`
+      : `<span style="font-size:11px;padding:2px 7px;border-radius:10px;background:rgba(251,146,60,0.12);color:#fb923c;border:1px solid rgba(251,146,60,0.3);font-family:var(--mono);">△ 기준 미달</span>`;
+    return `
+      <div class="llm-bar-row">
+        <div class="llm-bar-header">
+          <span class="llm-bar-label">${d.label}</span>
+          <span class="llm-bar-val">${d.value} ${unit} ${badge}</span>
+        </div>
+        <div class="llm-track">
+          <div class="llm-fill" id="${prefix}-fill-${i}" style="background:${c.fill};box-shadow:0 0 8px ${c.glow};width:0"></div>
+          <div class="llm-baseline-marker" style="left:${basePct}%;background:${baselineColor};opacity:0.8">
+            <div class="llm-baseline-tip" style="background:${baselineColor}22;color:${baselineColor};border:1px solid ${baselineColor}44">${higherBetter?'10 tps':'1,000ms'}</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function speedCard(label, ratio, isNpu) {
+  return `<div class="speedup-card ${isNpu?'s-npu':'s-gpu'}">
+    <div class="speedup-device">${label}</div>
+    <div class="speedup-value${isNpu?' npu':''}">${ratio}×</div>
+    <div class="speedup-label">최적화 후 속도 향상</div>
+  </div>`;
+}
+
+function emptyPage(model) {
+  return `${modelHeaderHTML(model)}
+    <div class="empty-state" style="flex:1;"><div class="empty-icon">📊</div><p>벤치마크 데이터 준비 중입니다</p></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 실시간 처리 구간 스트립 (지연 시간 → FPS 환산)
+// ═══════════════════════════════════════════════════════════
+const RT_HI = 2000, RT_LO = 0.2;                       // ms, 로그 스케일 범위
+const rtX = ms => Math.min(Math.max((Math.log10(RT_HI) - Math.log10(ms)) / (Math.log10(RT_HI)-Math.log10(RT_LO)) * 100, 0.5), 99.5);
+const RT_ZONES = [
+  { to:100,   cls:'z0', t:'배치 · 오프라인',   s:'10 FPS 미만' },
+  { to:33.34, cls:'z1', t:'준실시간',          s:'10–30 FPS' },
+  { to:16.67, cls:'z2', t:'실시간',            s:'30–60 FPS' },
+  { to:RT_LO, cls:'z3', t:'고속 실시간',       s:'60 FPS 이상' },
+];
+const rtZoneIdx = ms => ms > 100 ? 0 : ms > 33.34 ? 1 : ms > 16.67 ? 2 : 3;
+
+function realtimeStripHTML(beforeMs, afterMs, unitNote) {
+  const zones = RT_ZONES.map((z,i) => {
+    const from = i === 0 ? RT_HI : RT_ZONES[i-1].to;
+    const l = i === 0 ? 0 : rtX(from), r = i === RT_ZONES.length-1 ? 100 : rtX(z.to);
+    return `<div class="rt-zone ${z.cls}" style="left:${l}%;width:${(r-l).toFixed(2)}%">${z.t}<b>${z.s}</b></div>`;
+  }).join('');
+  const mk = (ms, isAfter) => {
+    const x = rtX(ms);
+    const fps = 1000/ms;
+    const tx = x < 16 ? 'translateX(0)' : x > 84 ? 'translateX(-100%)' : 'translateX(-50%)';
+    const txt = `${isAfter?'최적화 후':'원본'} ${ms.toFixed(ms<10?2:1)}ms · ${fps < 10 ? fps.toFixed(1) : Math.round(fps)} FPS`;
+    return `<div class="rt-mark ${isAfter?'after':'before'}" style="left:${x.toFixed(2)}%">
+      <div class="rt-cap" style="transform:${tx}">${txt}</div></div>`;
+  };
+  const zi = rtZoneIdx(beforeMs), zo = rtZoneIdx(afterMs);
+  const verdict = zi === zo
+    ? `두 모델 모두 <b>${RT_ZONES[zi].t}</b> 구간이지만, 지연이 <span class="up">${(beforeMs/afterMs).toFixed(1)}배</span> 줄어 동일 하드웨어에서 처리량을 그만큼 더 확보합니다.`
+    : `<b>${RT_ZONES[zi].t}(${RT_ZONES[zi].s})</b> 수준이던 모델이 최적화 후 <span class="up">${RT_ZONES[zo].t}(${RT_ZONES[zo].s})</span> 구간으로 올라섭니다.`;
+  const bF = 1000/beforeMs, aF = 1000/afterMs;
+  return `
+    <div class="rt-card anim-3">
+      <div class="metrics-title">실시간 처리 가능성 — 지연 시간 기준 ${unitNote||''}</div>
+      <div class="rt-fps">
+        <div class="rt-fps-chip">원본 처리량 <b>${bF<10?bF.toFixed(1):Math.round(bF)} FPS</b></div>
+        <div class="rt-fps-chip on">최적화 후 처리량 <b>${aF<10?aF.toFixed(1):Math.round(aF)} FPS</b></div>
+        <div class="rt-fps-chip">동시 처리 가능 채널 <b>×${(beforeMs/afterMs).toFixed(1)}</b></div>
+      </div>
+      <div class="rt-wrap">
+        <div class="rt-strip">${zones}</div>
+        ${mk(beforeMs,false)}${mk(afterMs,true)}
+      </div>
+      <div class="rt-zone-legend">${RT_ZONES.map(z=>`<span class="rzl ${z.cls}"><i></i>${z.t} <b>${z.s}</b></span>`).join('')}</div>
+      <div class="rt-verdict">${verdict}</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 개선 배수 계산 · 그룹 내 비교
+// ═══════════════════════════════════════════════════════════
+function primaryRatio(m) {
+  if (m.type === 'bench') {
+    const mt = m.metrics.find(x => !x.keep && !x.unlock) || m.metrics[0];
+    if (!mt || mt.keep || mt.unlock || !mt.before || !mt.after) return null;
+    return { r: mt.lowerBetter ? mt.before/mt.after : mt.after/mt.before, mt };
+  }
+  if (m.type === 'cv' && m.data) {
+    const map = {};
+    m.data.forEach(d => { if(!map[d.device]) map[d.device]={}; map[d.device][d.type]=d.value; });
+    let best = null;
+    Object.values(map).forEach(t => {
+      if (!t.original) return;
+      [t.optimized, t.optimized_npu].forEach(v => {
+        if (v) { const r = t.original/v; if (!best || r > best.r) best = { r, mt:{ label:'추론 지연', unit:'ms', before:t.original, after:v, lowerBetter:true } }; }
+      });
+    });
+    return best;
+  }
+  return null;
+}
+
+function peerRankHTML(model) {
+  const peers = models.map((m,i)=>({m,i})).filter(x => x.m.group === model.group);
+  if (peers.length < 3) return '';
+  const rows = peers.map(({m,i}) => { const p = primaryRatio(m); return p ? {m,i,r:p.r} : null; })
+                    .filter(Boolean).sort((a,b)=>b.r-a.r);
+  if (rows.length < 3) return '';
+  const maxR = Math.max(...rows.map(r=>r.r));
+  const gLabel = (GROUPS.find(g=>g.key===model.group)||{}).label || '';
+  return `
+    <div class="peer-card anim-3">
+      <div class="metrics-title">${gLabel} — 최적화 효과 순위</div>
+      ${rows.map((r,k)=>`
+        <div class="peer-row ${r.m===model?'me':''}">
+          <div class="peer-name"><b>${r.m.name}</b> ${r.m.sub||''}</div>
+          <div class="peer-track"><div class="peer-fill" id="pk-${k}" data-w="${Math.max(r.r/maxR*100,3).toFixed(1)}"></div></div>
+          <div class="peer-val">${r.r.toFixed(1)}×</div>
+        </div>`).join('')}
+      <div class="bench-footnote" style="border-top:1px solid var(--border);margin-top:10px;padding-top:10px">※ 각 사례의 대표 지표 기준 — 지표 종류(지연·메모리·크기 등)는 사례별로 다를 수 있습니다.</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// 사례 비교 뷰
+// ═══════════════════════════════════════════════════════════
+let cmpFilter = 'all', cmpSort = 'ratio';
+function compareRows() {
+  return models.map((m,i)=>{ const p = primaryRatio(m); return p ? {m,i,r:p.r,mt:p.mt} : null; }).filter(Boolean);
+}
+function renderCompare() {
+  const main = document.getElementById('mainContent');
+  main.scrollTop = 0;
+  let rows = compareRows();
+  const groupsPresent = GROUPS.filter(g => rows.some(r => r.m.group === g.key));
+  if (cmpFilter !== 'all') rows = rows.filter(r => r.m.group === cmpFilter);
+  rows = cmpSort === 'ratio' ? rows.sort((a,b)=>b.r-a.r)
+       : rows.sort((a,b)=>GROUPS.findIndex(g=>g.key===a.m.group)-GROUPS.findIndex(g=>g.key===b.m.group) || b.r-a.r);
+  const maxL = Math.log10(Math.max(...compareRows().map(r=>r.r)));
+
+  const chips = [`<button class="cmp-chip ${cmpFilter==='all'?'on':''}" onclick="setCmp('filter','all')">전체 ${compareRows().length}</button>`]
+    .concat(groupsPresent.map(g=>`<button class="cmp-chip ${cmpFilter===g.key?'on':''}" onclick="setCmp('filter','${g.key}')">${g.label}</button>`)).join('');
+  const sorts = `<button class="cmp-chip ${cmpSort==='ratio'?'on':''}" onclick="setCmp('sort','ratio')">개선폭 순</button>
+                 <button class="cmp-chip ${cmpSort==='group'?'on':''}" onclick="setCmp('sort','group')">그룹 순</button>`;
+
+  const body = rows.length ? rows.map((r,k)=>{
+    const mt = r.mt;
+    const pctTxt = mt.lowerBetter ? `${((1-mt.after/mt.before)*100).toFixed(0)}% 절감` : `${((mt.after/mt.before-1)*100).toFixed(0)}% 향상`;
+    return `<button class="cmp-row" onclick="goTo(${r.i})">
+      <div><div class="cmp-nm">${r.m.name}${r.m.sub?` <span style="font-weight:400;color:#6b7280">· ${r.m.sub}</span>`:''}</div>
+           <div class="cmp-hw">${(r.m.hw||[]).map(h=>h.name).join(' · ')}</div></div>
+      <div class="cmp-bar"><div class="cmp-fill cmp-g-${r.m.group}" id="cf-${k}" data-w="${Math.max(Math.log10(r.r)/maxL*100,2).toFixed(1)}"></div></div>
+      <div class="cmp-ba"><div class="cmp-ba-l">${mt.label}</div><div>${fmt(mt.before)} → <b>${fmt(mt.after)}</b> ${mt.unit} <span style="color:#6b7280">· ${pctTxt}</span></div></div>
+      <div class="cmp-ratio">${r.r.toFixed(1)}×</div>
+    </button>`;
+  }).join('') : `<div class="cmp-empty">해당 조건의 사례가 없습니다.</div>`;
+
+  main.innerHTML = `
+    <div class="cmp-head anim-0">
+      <div class="cmp-title">사례 비교 — 최적화 개선 배수</div>
+      <div class="cmp-desc">각 사례의 대표 지표(지연·메모리·크기·속도)를 기준으로 원본 대비 몇 배 개선됐는지 한 화면에서 비교합니다. 막대는 로그 스케일이며, 행을 클릭하면 상세 페이지로 이동합니다.</div>
+      <div class="cmp-controls">${chips}<div class="cmp-sep"></div>${sorts}</div>
+      <div class="cmp-legend">${GROUPS.filter(g=>compareRows().some(r=>r.m.group===g.key)).map(g=>
+        `<div class="cmp-lg"><i class="cmp-g-${g.key}"></i>${g.label}</div>`).join('')}</div>
+    </div>
+    <div class="cmp-table anim-1">
+      <div class="cmp-hdr"><span>사례 · 디바이스</span><span>개선 배수 (로그 스케일)</span><span>대표 지표 전 → 후</span><span>배수</span></div>
+      ${body}
+    </div>
+    <div class="cmp-note anim-2">
+      ※ 대표 지표는 사례별 첫 번째 성능 지표입니다 (성능 유지 지표는 제외). 여러 디바이스가 있는 경우 가장 개선폭이 큰 조합을 사용했습니다.<br>
+      ※ 원본 실행 자체가 불가능했던 사례(Yolo-Fastest, YOLOv8 NPU)와 최적화 후 값만 있는 온디바이스 LLM/VLM 상세 벤치마크는 배수 산출 대상에서 제외했습니다.
+    </div>`;
+
+  requestAnimationFrame(()=>setTimeout(()=>{
+    rows.forEach((_,k)=>{ const el=document.getElementById(`cf-${k}`); if(el) el.style.width=el.dataset.w+'%'; });
+  },60));
+}
+function setCmp(kind, val) { if (kind==='filter') cmpFilter = val; else cmpSort = val; renderCompare(); }
+
+// ═══════════════════════════════════════════════════════════
+// OVERVIEW
+// ═══════════════════════════════════════════════════════════
+function renderOverview() {
+  const main = document.getElementById('mainContent');
+  main.scrollTop = 0;
+  const sections = GROUPS.map(g => {
+    const items = models.map((m,i)=>({m,i})).filter(x=>x.m.group===g.key);
+    if (!items.length) return '';
+    const cards = items.map(({m,i}) => `
+      <button class="ov-card ${m.headline?.tone||''}" onclick="goTo(${i})">
+        <div class="ov-card-name">${m.name}</div>
+        <div class="ov-card-hw">${(m.hw||[]).map(h=>h.name).join(' · ')}</div>
+        <div class="ov-card-val">${m.headline?.val||'—'}</div>
+        <div class="ov-card-lbl">${m.headline?.lbl||''}</div>
+      </button>`).join('');
+    return `<div class="ov-group-title anim-2">${g.label}</div><div class="ov-cards anim-2">${cards}</div>`;
+  }).join('');
+
+  main.innerHTML = `
+    <div class="ov-hero anim-0">
+      <h2>Nota AI — AI모델 최적화 사례집</h2>
+      <p>Sharper · Faster · Lighter AI <em>by NetsPresso®</em><br>
+      Arm·SK텔레콤·텔레칩스 등 <b>고객 도입 사례</b>부터 3T급 초거대 LLM 서버 최적화, MCU 탑재 임베디드 모델까지 NetsPresso가 실제 하드웨어에서 검증한 ${models.length}개 사례입니다. 카드를 클릭하면 상세 내용으로 이동합니다.<br>
+      Qualcomm Snapdragon 8 Gen2·Gen3·X Elite, Dragonwing IQ-9075, QCS6490을 대상으로 <b>LLM/VLM 9종</b>의 그래프 최적화·양자화·런타임 커스텀을 수행했으며, Arm·NVIDIA·AWS Inferentia를 포함해 <b>100종 이상의 칩셋</b>을 지원합니다.</p>
+      <div class="ov-kpi-row">
+        <div class="ov-kpi"><div class="ov-kpi-val">최대 99%</div><div class="ov-kpi-lbl">추론 지연 단축 (IR 보행자 탐지)</div></div>
+        <div class="ov-kpi"><div class="ov-kpi-val">최대 76.5%</div><div class="ov-kpi-lbl">메모리 절감 (Solar Open2 250B)</div></div>
+        <div class="ov-kpi"><div class="ov-kpi-val">8 → 2장</div><div class="ov-kpi-lbl">서버 GPU 사용량 (H100)</div></div>
+        <div class="ov-kpi"><div class="ov-kpi-val">${models.length}건</div><div class="ov-kpi-lbl">검증된 최적화 사례</div></div>
+        <div class="ov-kpi"><div class="ov-kpi-val">${models.filter(m=>m.accuracyNote||m.accuracy||m.accuracyMulti).length}건</div><div class="ov-kpi-lbl">정확도 영향 수치 확보</div></div>
+      </div>
+    </div>
+    ${sections}
+    <div class="bench-footnote anim-3" style="margin-top:8px;padding-bottom:12px">
+      ※ 산업용 Vision 사례의 최적화 전 수치는 CPU·FP32 기준, 최적화 후는 DSP·INT8 기준입니다.<br>
+      ※ 모든 수치는 노타 자체 실측 벤치마크 결과이며, 각 사례 페이지의 「측정 · 검증 조건」에 런타임·SDK·정밀도·배치 조건을 함께 기재했습니다.<br>
+      ※ Confidential &amp; Proprietary · © 2026 Nota Inc.
+    </div>`;
+}
+
+applyFilter();
+routeFromHash(true);
+</script>
+</body>
+</html>
